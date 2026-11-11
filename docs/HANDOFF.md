@@ -61,3 +61,12 @@
 本机：`cd frontend` → `npm ci` → `npm run dev`，浏览器访问本机 5173。无环境变量或 Key 前置要求；生产预览用 `npm run build` 后 `npm run preview`。完整手动验收步骤见 README。
 
 建议下一任务先在 Windows 做阶段 1 人工验收，再按用户授权决定是否开始后端骨架；不要自动跳到真实 AI 或语音。创建 PR 需要允许 api.github.com 并具备相应 API 权限，勿在聊天发送 Token。
+
+## 提交与 PR 最终结果
+
+- 自动检查文档相对链接（8 个）、JSON 示例/清单、代码围栏与 `git diff --cached --check`：通过。
+- 实现提交：`03b7b09`，`feat: add Aora virtual robot frontend with local mock chat`。
+- `git push -u origin feat/stage1-virtual-robot`：成功，分支已推送；main 未修改。
+- `gh pr create --repo zhengxiangliu6-bit/Desktop-NOMI --base main --head feat/stage1-virtual-robot --title "feat: 阶段 1 虚拟机器人前端与 Mock 交互" --body-file /tmp/nomi-stage1-pr.md`：失败，`Post https://api.github.com/graphql: Forbidden`，**PR 未创建**。
+- 可手动创建：https://github.com/zhengxiangliu6-bit/Desktop-NOMI/compare/main...feat/stage1-virtual-robot?expand=1 。允许 api.github.com 并确认 API 权限后可重试 gh；若临时说明文件不存在，依据本交接重建 PR 说明。
+- 本最终记录作为后续文档提交推送同一分支。最新提交见 `git log -1`；未合并或发布。
