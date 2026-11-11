@@ -2,6 +2,20 @@
 
 状态：前端阶段 1 Mock、阶段 2A 后端与阶段 2B 开发 HTTP 集成已实现；全栈持久化、语音与硬件仍为目标设计。接口字段以 [API_CONTRACT](API_CONTRACT.md) 为准，阶段以 [ROADMAP](ROADMAP.md) 为准。
 
+## 阶段 2C 本地配置与安全边界
+
+本机终端显式启用 → 一次性配对 → 页面内存短期能力 → 设置接口。能力不是模型 Key，不写浏览器存储/URL；模型 Key 仅经非受控密码框临时输入并送后端，提交清空，不进入 React state。生产构建剔除整个设置组件。
+
+backend/app/settings 包含 Profile DTO、LocalSettings、平台 Vault、受保护 routes 和公网固定 IP TLS transport。Windows Generic Credential 保存配置+Key，无明文文件；非 Windows 仅内存。云端环境/Secrets 原路径仍兼容，但不是任意公网设置服务。
+
+读取、更新、清除和单次测试需 Bearer + 精确本地 Origin/Host + loopback peer / Fetch Metadata。读取用 POST /settings/read，不放松 Origin 来兼容 GET。设置中心管理的 openai 聊天同样要求页面能力，防止无授权本机调用使用该凭据。默认通道关闭，Mock 不变。
+
+配置快照写入 Vault 成功后才切换，失败保留旧值；有在途聊天/测试时拒绝更新。更改后清空旧上下文，DynamicProvider 的新请求获取新配置并关闭自己的 client，不重启程序。motion 仍无执行能力。
+
+管理端只接受精确百炼兼容根。连接层验证全部解析地址为公网，连接数字 IP，TLS Host/SNI 保持域名；禁止重定向、私网、metadata、任意路径和代理绕行。无法保障代理地址固定时失败关闭。默认不支持任意 OpenAI URL；旧可信运维环境 URL 不等于不可信 UI 输入。
+
+当前只承诺可信 OS 用户/浏览器/Vite 环境，不防同用户恶意软件、管理员或主动调试采集。原生 Windows、真实百炼和公网未验证；无复杂账号系统。完整信任假设、限制和用户流程见 [LOCAL_AI_SETTINGS](LOCAL_AI_SETTINGS.md)。
+
 ## 阶段 2B 已实现边界
 
 App 配置 → 统一 ChatService → 前端 mockChat 或 HTTP Client → 同源 Vite /api Proxy → FastAPI /api/v0/chat。Provider 选择和 Key 留在后端；前端与后端 Mock 的身份分别显示。所有生产构建由构建期常量强制选择前端 Mock，不允许 URL 或本地存储切换；Pages 工作流不需要后端。

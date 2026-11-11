@@ -30,9 +30,10 @@ def error_response(error: AppError, request_id: str) -> JSONResponse:
 class LocalHTTPBoundary:
     """Loopback prototype protection, bounded input and sanitized error/trace metadata."""
 
-    def __init__(self, app: ASGIApp, settings: Settings):
+    def __init__(self, app: ASGIApp, settings: Settings, local_admin=None):
         self.app = app
         self.settings = settings
+        self.local_admin = local_admin
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         if scope["type"] != "http":
@@ -84,8 +85,31 @@ class LocalHTTPBoundary:
             ):
                 await reject(AppError(403, "FORBIDDEN", "不允许的 Host 或 Origin。"))
                 return
+            if scope["path"].startswith("/api/v0/settings"):
+                try:
+                    if self.local_admin is None or not self.local_admin.enabled:
+                        raise AppError(
+                            403,
+                            "SETTINGS_DISABLED",
+                            "请在本机终端使用 --enable-settings 启用配置。",
+                        )
+                    self.local_admin.boundary(scope, headers, scope["path"])
+                except AppError as error:
+                    await reject(error)
+                    return
+            if (
+                scope["path"] == "/api/v0/chat"
+                and self.local_admin is not None
+                and self.local_admin.profile.managed
+                and self.local_admin.profile.provider == "openai"
+            ):
+                try:
+                    self.local_admin.boundary(scope, headers, scope["path"])
+                except AppError:
+                    await reject(AppError(403, "FORBIDDEN", "请先在本地 AI 设置完成配对。"))
+                    return
             upstream_receive = receive
-            if scope["method"] == "POST":
+            if scope["method"] in {"POST", "PUT"}:
                 content_type = headers.get("content-type", "").split(";", 1)[0].strip().lower()
                 if content_type != "application/json":
                     await reject(

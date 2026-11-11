@@ -166,3 +166,30 @@ def test_api_transport_timeout_then_recovery_keeps_good_context(settings_factory
         assert [item["role"] for item in context] == ["system", "user", "assistant", "user"]
         assert "failed-turn" not in [item["content"] for item in context]
         assert "private network details" not in failed.text
+
+
+async def test_bailian_url_json_mode_token_parameter_and_key_echo_rejection(settings_factory):
+    requests = []
+    settings = settings_factory(
+        llm_provider="openai",
+        llm_base_url="https://dashscope.aliyuncs.com/compatible-mode/v1",
+        llm_model="arbitrary-configured-id",
+        llm_api_key="fictional-echo-key",
+        llm_token_parameter="max_completion_tokens",
+        llm_json_mode=True,
+    )
+
+    def handler(request):
+        requests.append(request)
+        return httpx.Response(200, json=envelope(reply_json(reply="fictional-echo-key")))
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+        with pytest.raises(ModelFormatError):
+            await OpenAIProvider(settings, client).complete([ChatMessage("user", "test")])
+    assert (
+        str(requests[0].url) == "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions"
+    )
+    body = json.loads(requests[0].content)
+    assert body["model"] == "arbitrary-configured-id"
+    assert body["response_format"] == {"type": "json_object"}
+    assert body["max_completion_tokens"] == 1024 and "max_tokens" not in body

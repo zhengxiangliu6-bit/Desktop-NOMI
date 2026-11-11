@@ -102,3 +102,7 @@ uv run --frozen pytest
 后续获得明确授权和费用预算后，再在后端安全配置真实供应商。先确认 Chat Completions、max_tokens、可选 JSON mode 与模型兼容性，再做最小一至两轮无隐私输入的实测，记录模式、HTTP 状态与结构校验结果，勿记录 Key 或用户数据。health 只证明配置齐全，不证明账号可用；超时/格式错误回归继续使用 Mock，不以付费重试替代测试。
 
 需要另行验证真实账号权限、计费、TLS/网络、模型结构化输出稳定性和真实上下文 token 限制。当前无公网后端、认证或语音，不因此自动启动部署或硬件工作。
+
+## 阶段 2C 后续实现
+
+本地设置已实现，前端可用 `npm run dev:api`，后端 `python -m app.cli --enable-settings`；不必手工编辑模型 .env。受管真实 Provider 需要终端配对的短期页面能力。原有环境注入路径与 Mock 保留，生产仍剔除设置。具体 Windows 步骤、授权、存储、SSRF/代理限制和单次模型测试见 [LOCAL_AI_SETTINGS](LOCAL_AI_SETTINGS.md)。本次没有执行真实账号验证，前文真实验证建议不是已通过结果。

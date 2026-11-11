@@ -1,4 +1,4 @@
-import { readdir } from "node:fs/promises";
+import { readdir, readFile } from "node:fs/promises";
 import { expect, test } from "@playwright/test";
 
 test("production Pages subpath: assets, Mock chat, refresh and home navigation", async ({
@@ -22,6 +22,8 @@ test("production Pages subpath: assets, Mock chat, refresh and home navigation",
   });
   await page.goto("./?preview=mock");
   await expect(page.getByText("MOCK 模式")).toBeVisible();
+  await expect(page.getByRole("button", { name: "AI 设置" })).toHaveCount(0);
+  await expect(page.getByLabel("API Key")).toHaveCount(0);
   await expect(page.locator(".aora-mark svg").first()).toBeVisible();
   expect(resources.some((url) => url.endsWith(".js"))).toBe(true);
   expect(resources.some((url) => url.endsWith(".css"))).toBe(true);
@@ -29,6 +31,18 @@ test("production Pages subpath: assets, Mock chat, refresh and home navigation",
     true,
   );
 
+  // Sensitive local settings implementation must be absent, not merely hidden.
+  for (const file of await readdir("dist/assets")) {
+    if (file.endsWith(".js")) {
+      const source = await readFile(`dist/assets/${file}`, "utf8");
+      for (const marker of [
+        "/api/v0/settings",
+        "confirm_paid_request",
+        "终端一次性配对码",
+      ])
+        expect(source, file).not.toContain(marker);
+    }
+  }
   // Check all emitted chunks, including lazy Aora theme assets.
   for (const file of await readdir("dist/assets")) {
     const response = await request.get(`${baseURL}assets/${file}`);

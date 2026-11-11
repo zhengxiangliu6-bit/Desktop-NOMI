@@ -28,6 +28,7 @@ class Settings(BaseSettings):
     llm_timeout_seconds: float = Field(default=60, gt=0, le=120, allow_inf_nan=False)
     llm_max_output_tokens: int = Field(default=1024, ge=64, le=8192)
     llm_json_mode: bool = False
+    llm_token_parameter: Literal["max_tokens", "max_completion_tokens"] = "max_tokens"
     context_max_turns: int = Field(default=10, ge=1, le=50)
     context_max_chars: int = Field(default=16000, ge=5000, le=128000)
     max_sessions: int = Field(default=100, ge=1, le=1000)

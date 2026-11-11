@@ -32,7 +32,7 @@ class OpenAIProvider:
             "model": settings.llm_model,
             "messages": [{"role": item.role, "content": item.content} for item in messages],
             "stream": False,
-            "max_tokens": settings.llm_max_output_tokens,
+            settings.llm_token_parameter: settings.llm_max_output_tokens,
         }
         if settings.llm_json_mode:
             payload["response_format"] = {"type": "json_object"}
@@ -68,6 +68,8 @@ class OpenAIProvider:
                 or message.get("function_call")
                 or choice.get("finish_reason") not in {None, "stop"}
             ):
+                raise ModelFormatError()
+            if settings.llm_api_key.get_secret_value() in content:
                 raise ModelFormatError()
             return content
         except (ValueError, KeyError, IndexError, TypeError, AttributeError):

@@ -24,7 +24,7 @@ export default defineConfig({
       },
     },
     {
-      command: "npm run dev",
+      command: "npm run dev:api",
       url: "http://127.0.0.1:5173/Desktop-NOMI/",
       reuseExistingServer: false,
       env: {

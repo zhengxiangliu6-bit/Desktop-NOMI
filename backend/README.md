@@ -61,3 +61,11 @@ Provider 使用非流式 `/chat/completions`、messages、model、max_tokens；�
 - 当前仅内存上下文，重启清空；不支持多 worker、SQLite、持久化、幂等去重或用户认证。默认只供本机开发，不直接开放公网。
 - motion 只是枚举；没有 shell、文件写入、工具执行或硬件控制模块。语音与真实模型烟测未执行；2B HTTP 集成由实际 FastAPI + 测试 Mock 验证，见 [集成说明](../docs/INTEGRATION.md)。
 - pytest 当前有一项上游 Starlette TestClient 对 httpx 的弃用提示；未屏蔽，不影响本次已执行用例，但未来升级测试客户端需重新验证。
+
+## 阶段 2C 本地配置
+
+`uv run --frozen python -m app.cli --enable-settings` 显式启用一次性终端配对。Windows 用 Credential Manager 存储完整受保护记录，非 Windows 仅内存，无明文文件回退。正常 Windows CLI 读取已保存配置，但设置和受管真实聊天仍需启用并配对授权。前端 `npm run dev:api` 无需编辑 `.env` 即可进入开发 API 模式。
+
+新增受保护 `/api/v0/settings/pair`、`/read`、PUT settings、`/test`；读状态不返回模型 Key，配对 token 是另一种短期本机能力，只留页面内存。受管真实聊天也需该授权。连接测试须每次显式确认，最多一次 Provider 调用、输出参数至多 256，不自动重试。配置变更清空旧会话，忙碌时拒绝更改。
+
+仅允许精确百炼公开兼容根，连接时检查并固定公网 IP、保留 TLS 主机校验；受管代理环境失败关闭，原有可信环境/Secrets 路径保留。本次无真实模型/Windows 原生验证，完整限制见 [LOCAL_AI_SETTINGS](../docs/LOCAL_AI_SETTINGS.md)。

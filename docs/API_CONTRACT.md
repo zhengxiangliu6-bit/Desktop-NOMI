@@ -114,3 +114,22 @@ retryable 仅表示可由用户选择重试，不等于应该自动重试；认�
 错误 body 的 message 仅用于服务端契约，前端不直接显示它，而按经过检查的 code/status 使用固定安全文案。网络错误、客户端等待超时和非 JSON/非法响应为客户端本地错误，不是新增后端状态码；未知提交结果和取消都不保证服务端停止，也不自动重试。
 
 Pydantic schema 快照为 contracts/chat-v0.json，由 backend/scripts/export_contract.py 生成，后端与前端测试分别检查与实际模型和消费类型一致。字段与路由没有变更，不使用归档中的 sessions/turn_id。具体开发边界见 [INTEGRATION](INTEGRATION.md)。
+
+## 阶段 2C：本机受保护配置接口
+
+默认关闭，由 CLI `--enable-settings` 启用；只接受可信 loopback 开发来源和配对授权，不能仅靠 CORS。原有 chat JSON 字段未变；**受管 openai 配置的 chat 额外要求本次配对 Bearer token**，缺失时 403 FORBIDDEN，不发供应商请求。Mock 不新增授权要求。
+
+| 方法/路径 | 请求 | 响应 |
+| --- | --- | --- |
+| POST /api/v0/settings/pair | `{code:string}`（终端一次性码） | `{token:string, expires_in:1800}`，这是短期本机能力，不是模型 Key |
+| POST /api/v0/settings/read | `{}` + Bearer | 非敏感配置、key_configured、storage、revision、connection、allowed_base_urls；无 api_key 字段 |
+| PUT /api/v0/settings | ProfileUpdate + Bearer | 同上；保存后清空旧会话，连接状态回到未测试 |
+| POST /api/v0/settings/test | `{revision:integer,confirm_paid_request:true}` + Bearer | `{ok:true,provider,revision}`，一次调用，不返回模型文本 |
+
+敏感读取使用 POST，以便浏览器稳定发送 Origin；没有匿名 GET 设置读取。所有操作检查唯一 Host/Origin、真实 loopback peer、精确本地来源、同源 Fetch Metadata；除配对外需有效随机 Bearer。配对码五分钟、最多五次尝试、单次使用；能力三十分钟，刷新不恢复。
+
+ProfileUpdate 仅允许 provider(mock/openai)、base_url、model、key_action(keep/replace/clear)、可选 api_key、max_tokens(64..8192)、token_parameter(max_tokens/max_completion_tokens)、json_mode。openai 要求受支持的非空入口/模型；Key 可稍后填写，缺失时不能连接。keep 不接受新 Key；replace 必须有合法新 Key；clear 不能同时发送新 Key。更换入口须明确 replace/clear，不能复用旧 Key。Key 从不进入读取响应、错误原文或日志。
+
+新增安全错误沿用 ErrorEnvelope：403 SETTINGS_DISABLED/SETTINGS_FORBIDDEN；409 CONFIGURATION_BUSY/KEY_SCOPE_CHANGED；503 CREDENTIAL_STORAGE_ERROR/SECURE_TRANSPORT_UNAVAILABLE；422 VALIDATION_ERROR。测试上游错误沿用 UPSTREAM_ERROR/TIMEOUT/INVALID_RESPONSE。连接测试 revision 不匹配、并发或无字面 true 授权时不调用供应商。配置更改成功后新请求立即用新快照，忙碌时拒绝更新。
+
+公开凭据状态仅 key_configured(bool)；storage 为 windows-credential-manager 或 memory-only；connection 为 not_tested 或 verified。Windows 原生存储、SSRF 策略、代理限制、刷新重配对与单次付费测试详见 [LOCAL_AI_SETTINGS](LOCAL_AI_SETTINGS.md)。当前仅桌面开发的可信本机界面，没有公网配置通道。

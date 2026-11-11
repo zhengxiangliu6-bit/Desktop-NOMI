@@ -44,21 +44,19 @@ describe("HTTP Chat Service", () => {
     "maps %s without rendering upstream detail",
     async (code, statuses) => {
       const service = createHttpChatService({
-        fetcher: vi
-          .fn<typeof fetch>()
-          .mockResolvedValue(
-            json(
-              {
-                error: {
-                  code,
-                  message: "sensitive-test-detail",
-                  request_id: id,
-                  retryable: true,
-                },
+        fetcher: vi.fn<typeof fetch>().mockResolvedValue(
+          json(
+            {
+              error: {
+                code,
+                message: "sensitive-test-detail",
+                request_id: id,
+                retryable: true,
               },
-              statuses[0],
-            ),
+            },
+            statuses[0],
           ),
+        ),
       });
       try {
         await service("hello", new AbortController().signal);
@@ -148,4 +146,24 @@ describe("HTTP Chat Service", () => {
     await assertion;
     expect(vi.getTimerCount()).toBe(0);
   });
+});
+
+it("sends only the in-memory local capability, never a provider key", async () => {
+  const { setLocalAuthorization } = await import("./localAuthorization");
+  setLocalAuthorization("fictional-local-capability");
+  try {
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(json(response));
+    await createHttpChatService({ fetcher })(
+      "hi",
+      new AbortController().signal,
+    );
+    expect(fetcher.mock.calls[0]![1]!.headers).toMatchObject({
+      Authorization: "Bearer fictional-local-capability",
+    });
+    expect(fetcher.mock.calls[0]![1]!.body).toBe(
+      JSON.stringify({ text: "hi" }),
+    );
+  } finally {
+    setLocalAuthorization(null);
+  }
 });

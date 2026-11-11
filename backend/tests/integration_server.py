@@ -6,6 +6,8 @@ from app.adapters.llm.mock import MockProvider
 from app.core.config import Settings
 from app.core.errors import ModelFormatError, ProviderRequestError, ProviderTimeoutError
 from app.main import create_app
+from app.settings.manager import LocalSettings
+from app.settings.vault import MemoryVault
 
 
 class IntegrationMockProvider(MockProvider):
@@ -23,7 +25,18 @@ class IntegrationMockProvider(MockProvider):
         return await super().complete(messages)
 
 
+settings = Settings(_env_file=None, llm_provider="mock", session_ttl_seconds=4)
+
+
+def test_factory(current, managed):
+    provider = IntegrationMockProvider()
+    provider.name = current.llm_provider
+    return provider
+
+
 app = create_app(
-    Settings(_env_file=None, llm_provider="mock", session_ttl_seconds=4),
-    IntegrationMockProvider(),
+    settings,
+    local_admin=LocalSettings(
+        settings, MemoryVault(), "fixture-local-pairing-code", factory=test_factory
+    ),
 )

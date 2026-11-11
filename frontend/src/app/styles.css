@@ -667,3 +667,44 @@ footer a {
 .debug-content dl {
   flex-wrap: wrap;
 }
+
+.ai-settings {
+  background: #fffefa;
+  border: 1px solid #d9e0d0;
+  border-radius: 16px;
+  padding: 20px;
+  margin: 16px 0;
+  color: #435940;
+  font-size: 13px;
+}
+.ai-settings fieldset {
+  border: 0;
+  margin: 0;
+  padding: 0;
+}
+.ai-settings label {
+  display: block;
+  margin: 12px 0;
+}
+.ai-settings input:not([type="checkbox"]),
+.ai-settings select {
+  display: block;
+  width: 100%;
+  padding: 9px;
+  margin-top: 6px;
+  border: 1px solid #bbcbb2;
+  border-radius: 6px;
+  background: #fafbf6;
+  font: inherit;
+}
+.ai-settings button {
+  padding: 8px 12px;
+  border: 1px solid #b6c8ab;
+  border-radius: 6px;
+  background: #edf3e6;
+  color: #365535;
+  margin: 8px 6px 4px 0;
+}
+.ai-settings p {
+  line-height: 1.7;
+}

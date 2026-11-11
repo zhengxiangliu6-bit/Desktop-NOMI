@@ -1,5 +1,57 @@
 # 任务交接
 
+更新：2026-11-11（UTC）。当前交付：**阶段 2C，本地 AI 配置中心**。只开发可信本机 API 模式，不部署真实后端，不进行真实收费调用。下方 2B 记录为历史，不代表本期实现状态。
+
+## 当前基线与恢复
+
+- `git fetch origin main` 得到 `e06e8a9`（PR #5）；`git merge-base --is-ancestor f4ba50c origin/main` 返回 0，确认 2B 已合并。从最新 main 创建 `feat/stage2c-local-ai-settings`，不修改 main。
+- 已读 AGENTS、README、ARCHITECTURE、API_CONTRACT、INTEGRATION、旧 HANDOFF、backend/README 和当前配置/聊天实现；没有采用 design 归档草案。
+- 详细风险、Windows 操作、保存位置、配对失效与供应商限制见 [LOCAL_AI_SETTINGS](LOCAL_AI_SETTINGS.md)。
+
+## 决策与兼容性
+
+- 管理通道需 CLI `--enable-settings` 显式启用。本机终端一次性码五分钟/最多五次，配对换取三十分钟能力 token；只在浏览器模块内存，不写 storage/cookie/URL。刷新后需重启授权通道重新配对；关闭面板仍可聊天。
+- 管理操作叠加 loopback peer、合法 Host、精确本机 Origin、唯一头、同源 Fetch Metadata 与 bearer 校验，不只依赖 CORS。读取采用 POST `/api/v0/settings/read`，因为浏览器同源 GET 不保证 Origin；没有为通过测试放松来源限制。
+- 原聊天结构不变，受管真实 Provider 的聊天新增能力授权；旧环境注入路径仍兼容原本机信任模型。设置默认关闭，普通 Mock 不受影响。
+- Windows 用 Credential Manager 保存完整受保护记录，无明文落盘或降级；非 Windows 仅内存，外部 Secrets 继续由平台管理。保存先写存储、成功后热切换，失败回滚；忙碌拒绝更改，切换清空旧模型会话。
+- 密钥为非受控密码输入，不进入 React state/浏览器存储/URL/日志；提交立即清空，读取只回 key_configured。后台 SecretStr、固定安全错误；供应商回显当前 Key 时拒绝该输出。不能抵御同用户恶意进程/扩展/主动 HAR 采集，不保证 JS/Python 内存零化。
+- 配置中心只允许三条精确百炼 HTTPS 根；拒绝地址变体/私网 DNS，连接固定已验证数字 IP并保留 TLS 主机校验，不重定向/重试。新增 anyio/httpcore 直接依赖（原已为传递依赖），不引入账号系统或新框架。
+- 系统/环境代理存在时受管安全直连失败关闭，不绕过代理。当前云环境不能做此路径的真实验证。需要代理的企业环境尚待专项支持。
+- 保存/读取/清除不调用供应商。连接测试需当前 revision 与 JSON true 明确确认、一次一请求、无自动重试，输出 token 上限 256，返回不含模型文本。max_tokens/max_completion_tokens 可选，JSON Object 按模型显式启用，无固定模型名。
+- Pages 工作流不改；所有生产构建继续强制 Mock，并通过编译期分支剔除设置模块。未实现语音、长期记忆、硬件或公网服务。
+
+## 执行命令与结果
+
+依赖安装与检查使用 `npm ci`（frontend）、`uv sync --frozen --group dev`（backend）；uv 使用云端系统 CA 和 /tmp 缓存，不输出凭据。
+
+- backend：`uv run --frozen ruff check .`、`uv run --frozen ruff format --check .` 通过，37 文件；`uv run --frozen pytest -q`：96 passed，1 条现有 Starlette/httpx 弃用警告。`uv lock --check --offline` 通过。
+- frontend：`npm run typecheck` 通过；`npm test`：72 passed；`npm run build` 通过，保留既有 Aora 主包超过 500kB 提示。
+- `npm run test:e2e`：2 passed；`npm run test:pages`：1 passed；`npm run test:integration`：4 passed（实际 FastAPI 进程 + 测试 Mock Provider，无真实模型）。Pages 测试同时检查无设置控件和生成 JS 不含配置入口/付费测试字段。
+- 浏览器命令使用 `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium`；本轮最初未设置时因 Playwright 缓存浏览器不存在而启动失败，指定已安装系统 Chromium 后重新执行通过，不是跳过测试。
+- 文档相对链接、代码围栏、JSON 与 `git diff --check` 检查通过。没有变更 Pages 工作流，没有执行远端部署/CI。
+
+## 修改文件范围
+
+- 后端：新增 app/settings 的模型、授权管理、路由、Windows/内存 vault、公网 DNS 固定 transport；调整 main、CLI、HTTP 边界、health、Provider/token 参数、pyproject/uv.lock。新增安全配置测试，更新 Provider/集成测试与 fixture。
+- 前端：新增 AISettings 与测试、内存授权模块、跨平台 dev:api 启动器；调整 App 入口/样式、HTTP 授权、安全错误、单测和 Playwright 集成/Pages 检查。机器人表情与 Mock 服务不重新设计。
+- 文档：README、backend/README、API_CONTRACT、ARCHITECTURE、INTEGRATION、ROADMAP、HANDOFF、LOCAL_AI_SETTINGS；根 .env.example 仅增加非敏感 token 参数。
+
+## 本机启动与下一步
+
+两个终端：backend 中 `uv run --frozen python -m app.cli --enable-settings`；frontend 中 `npm run dev:api`。在本机打开 `http://127.0.0.1:5173/Desktop-NOMI/` → AI 设置 → 终端配对 → 选择地域入口、自己的模型 ID、密码框输入 Key → 保存。然后明确勾选单次测试费用确认，再点击测试连接。不要把真实 Key 发给助手或提交到 Git。
+
+未执行：Windows 原生凭据实机验证、真实百炼账号/模型/TLS/费用、实际供应商参数支持。Windows 使用 API 替身测试，不能声称原生通过。官方兼容文档访问被代理 403 拒绝，不能声称在线文档/入口实连已核实。真实 Key 的所有验证需拥有者本机显式单次授权，先确认地域、模型支持与预算。
+
+已知限制：配对刷新需要重新启用通道；非 Windows 重启丢失配置；企业代理不支持受管直连；仍为单 worker 内存会话。下一步先做 Windows 原生保存/重启/清除验收，再由用户明确点击授权一次百炼连接测试，不自动扩展范围。
+
+## Git 交付
+
+待本次提交、推送与 PR 尝试后记录实际结果；不合并、不发布。
+
+---
+
+# 历史：阶段 2B 交接（仅供追溯）
+
 更新：2026-11-11（Asia/Shanghai）。当前交付：**阶段 2B，前后端文字对话集成**。默认/生产/Pages 保持纯前端 Mock，显式开发 API 模式通过同源 Vite Proxy 连接 loopback FastAPI。没有语音、长期记忆、硬件或公网后端部署。
 
 ## 基线与恢复入口

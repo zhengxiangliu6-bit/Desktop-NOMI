@@ -7,7 +7,8 @@ router = APIRouter(prefix="/api/v0")
 
 @router.get("/health", response_model=Health)
 async def health(request: Request) -> Health:
-    settings = request.app.state.settings
+    admin = request.app.state.local_admin
+    settings = admin.settings() if admin else request.app.state.settings
     return Health(
         provider=settings.llm_provider, capabilities=Capabilities(chat=settings.chat_available)
     )

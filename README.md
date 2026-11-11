@@ -4,7 +4,7 @@
 
 ## 当前状态
 
-当前为 **阶段 2B：前后端文字对话集成**（阶段 1 外观与 Mock 保留）。`frontend/` 已可运行：中央 Aora 圆形角色、响应式聊天外壳、纯本地 Mock 回复、阶段/情绪独立管理、可折叠调试与错误恢复。界面清晰标识前端 Mock / API / 后端 Mock，尚未执行真实模型验证或实现语音。阶段 2A 提供 FastAPI 服务，阶段 2B 已增加显式开发 API 模式，经同源代理对接结构化回复；默认和所有生产构建仍是前端 Mock。真实账号验证未执行，无持久化或硬件控制。
+当前为 **阶段 2C：本地 AI 配置中心**（阶段 1 外观与 Mock 保留）。`frontend/` 已可运行：中央 Aora 圆形角色、响应式聊天外壳、纯本地 Mock 回复、阶段/情绪独立管理、可折叠调试与错误恢复。界面清晰标识前端 Mock / API / 后端 Mock，尚未执行真实模型验证或实现语音。阶段 2A 提供 FastAPI 服务，阶段 2B 已增加显式开发 API 模式，经同源代理对接结构化回复；默认和所有生产构建仍是前端 Mock。真实账号验证未执行，无持久化或硬件控制。
 
 ## 阶段 2A：独立 AI 后端
 
@@ -26,6 +26,12 @@ uv run --frozen python -m app.cli
 首轮不带 session_id，成功后续聊复用；「新会话」显式重建，错误不污染成功记录。API 回答标识真实返回的 Provider，后端 Mock 绝不冒充真实模型。取消不能保证后端停止，手动重试真实模型可能重复计费。所有生产构建强制 Mock，无公网后端。
 
 完整的两终端启动、配置、Mock/API 验收、测试和阶段 2C 建议见 [集成说明](docs/INTEGRATION.md)。新增 `npm run test:integration` 使用实际 FastAPI + Mock Provider，无需账号。
+
+## 阶段 2C：本地 AI 设置
+
+在自己的可信 Windows 电脑，后端使用 `uv run --frozen python -m app.cli --enable-settings`，前端使用 `npm run dev:api`，不必编辑模型 `.env`。在“AI 设置”输入终端一次性配对码后，可配置百炼入口、模型和密码框 Key，保存到 Windows 系统凭据管理器；读取只返回 Key 是否存在。保存不调用模型，新请求热更新；真实连接测试需要单独明确授权。
+
+默认关闭设置通道，Pages/所有生产包不含敏感设置实现。非 Windows 只在内存保存；代理环境的受管安全连接会失败关闭。真实百炼与 Windows 原生验证未执行。安全边界、Windows 详细操作及单次测试说明见 [本地配置中心](docs/LOCAL_AI_SETTINGS.md)。
 
 ## 在线预览（GitHub Pages）
 

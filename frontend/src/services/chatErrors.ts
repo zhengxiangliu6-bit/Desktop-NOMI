@@ -15,7 +15,7 @@ const messages: Record<ChatErrorCode, string> = {
   NETWORK_ERROR: "无法连接对话服务，请检查网络和后端是否启动。",
   CLIENT_TIMEOUT: "等待服务超时，提交结果未知；后端可能仍在处理。",
   INVALID_RESPONSE: "服务返回非预期格式，请检查后端是否启动、代理地址和服务版本。",
-  FORBIDDEN: "后端拒绝当前来源，请检查同源开发代理配置。",
+  FORBIDDEN: "后端拒绝访问，请先在本地 AI 设置配对，或检查同源代理来源。",
   PAYLOAD_TOO_LARGE: "请求过长，请缩短后重试。",
   UNSUPPORTED_MEDIA_TYPE: "请求格式不受支持，请检查客户端与服务版本。",
   VALIDATION_ERROR: "输入或会话格式不合法，请检查后重试。",

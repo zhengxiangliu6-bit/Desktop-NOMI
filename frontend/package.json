@@ -15,7 +15,8 @@
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview --host 127.0.0.1 --port 4173 --strictPort",
     "test:pages": "playwright test --config playwright.pages.config.ts",
-    "test:integration": "playwright test --config playwright.integration.config.ts"
+    "test:integration": "playwright test --config playwright.integration.config.ts",
+    "dev:api": "node scripts/dev-api.mjs"
   },
   "dependencies": {
     "@aora-bot/react": "0.2.0",

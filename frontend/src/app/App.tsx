@@ -1,3 +1,4 @@
+import { lazy, Suspense, useState } from "react";
 import { ChatPanel } from "../features/conversation/ChatPanel";
 import { DebugPanel } from "../features/robot/DebugPanel";
 import { RobotView } from "../features/robot/RobotView";
@@ -25,7 +26,12 @@ const service =
       })
     : mockChat;
 
+const SettingsPanel = __NOMI_PRODUCTION_MOCK__
+  ? null
+  : lazy(() => import("../features/settings/AISettings"));
+
 export function App() {
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const { state, busy, send, cancel, preview, newConversation, debugError } =
     useRobotController(service, config.mode);
   return (
@@ -63,7 +69,20 @@ export function App() {
           <div className="session-controls">
             <span>HTTP 对话 · 无语音 · 新会话会清空本页记录</span>
             <button onClick={newConversation}>新会话</button>
+            {SettingsPanel && (
+              <button disabled={busy} onClick={() => setSettingsOpen(true)}>
+                AI 设置
+              </button>
+            )}
           </div>
+        )}
+        {settingsOpen && config.mode === "api" && SettingsPanel && (
+          <Suspense fallback={<p>正在打开本地设置…</p>}>
+            <SettingsPanel
+              onClose={() => setSettingsOpen(false)}
+              onSaved={newConversation}
+            />
+          </Suspense>
         )}
         {state.notice && (
           <p className="session-notice" role="status">
@@ -83,7 +102,12 @@ export function App() {
             ...state.messages,
             ...(state.pendingMessage ? [state.pendingMessage] : []),
           ]}
-          disabled={busy || state.phase === "error" || state.requiresNewSession}
+          disabled={
+            busy ||
+            settingsOpen ||
+            state.phase === "error" ||
+            state.requiresNewSession
+          }
           busy={busy}
           onSend={send}
           onCancel={cancel}

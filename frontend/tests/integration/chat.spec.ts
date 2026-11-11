@@ -101,3 +101,53 @@ test("new session and cancellation isolate in-flight responses; debug remains lo
   await expect(page.getByRole("alert")).toContainText("模拟故障");
   expect(requests).toEqual([]);
 });
+
+test("local settings pair, protected save/read, explicit Mock test and key clear", async ({
+  page,
+}) => {
+  // Fake credential only; never enable screenshots, traces or network attachments for this flow.
+  await page.goto("./");
+  await page.getByRole("button", { name: "AI 设置", exact: true }).click();
+  await page.getByLabel("终端一次性配对码").fill("fixture-local-pairing-code");
+  await page.getByRole("button", { name: "配对本机后端" }).click();
+  await expect(page.getByLabel("Model ID")).toBeVisible();
+  await page.getByLabel("Model ID").fill("fixture-configured-id");
+  await page.getByLabel("Key 操作").selectOption("replace");
+  await page.getByLabel("API Key").fill("fictional-browser-fixture-key");
+  await page.getByRole("button", { name: "保存配置" }).click();
+  await expect(page.getByLabel("API Key")).toHaveValue("");
+  await expect(page.getByText(/Key 状态：已配置/)).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "测试连接（单次）" }),
+  ).toBeDisabled();
+  await page.getByRole("checkbox", { name: /我明确授权/ }).check();
+  await page.getByRole("button", { name: "测试连接（单次）" }).click();
+  await expect(page.getByText("Mock 测试通过，没有供应商请求。")).toBeVisible();
+  await page.getByLabel("Provider", { exact: true }).selectOption("openai");
+  await page
+    .getByLabel("Base URL")
+    .fill("https://dashscope.aliyuncs.com/compatible-mode/v1");
+  await page.getByLabel("Key 操作").selectOption("replace");
+  await page.getByLabel("API Key").fill("fictional-browser-fixture-key");
+  await page.getByRole("button", { name: "保存配置" }).click();
+  await expect(page.getByLabel("API Key")).toHaveValue("");
+  await page.getByRole("button", { name: "关闭设置" }).click();
+  // The test factory is still Mock; this exercises managed-chat authorization, not a real model.
+  await send(page, "authorized configured chat");
+  await expect(page.locator(".message.assistant")).toHaveCount(1);
+  await page.getByRole("button", { name: "停止等待" }).click();
+  await page.getByRole("button", { name: "AI 设置", exact: true }).click();
+  await expect(page.getByLabel("API Key")).toHaveValue("");
+  await page.getByLabel("Key 操作").selectOption("clear");
+  await page.getByRole("button", { name: "保存配置" }).click();
+  await expect(page.getByText(/Key 状态：未配置/)).toBeVisible();
+  const storage = await page.evaluate(() => [
+    localStorage.length,
+    sessionStorage.length,
+  ]);
+  expect(storage).toEqual([0, 0]);
+  await page.reload();
+  await page.getByRole("button", { name: "AI 设置", exact: true }).click();
+  await expect(page.getByLabel("终端一次性配对码")).toBeVisible();
+  await expect(page.getByLabel("API Key")).toHaveCount(0);
+});

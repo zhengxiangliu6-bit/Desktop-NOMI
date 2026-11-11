@@ -1,3 +1,4 @@
+import { getLocalAuthorization } from "./localAuthorization";
 import {
   errorStatuses,
   isChatResponse,
@@ -50,7 +51,12 @@ export function createHttpChatService({
         credentials: "omit",
         redirect: "error",
         cache: "no-store",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(getLocalAuthorization()
+            ? { Authorization: `Bearer ${getLocalAuthorization()}` }
+            : {}),
+        },
         signal: request.signal,
         body: JSON.stringify({
           text,
