@@ -1,64 +1,73 @@
 # 任务交接
 
-更新：2026-11-11（Asia/Shanghai）。本次仅为现有阶段 1 添加 GitHub Pages 静态在线预览配置，不继续 AI / 语音，不重新设计界面。
+更新：2026-11-11（Asia/Shanghai）。当前交付：**阶段 2A，独立 FastAPI AI 后端基础**。阶段 1 前端 Mock、Aora 与 Pages 工作流完全未修改；前端集成留到 2B。
 
-## 基线、分支与当前状态
+## 恢复入口与基线
 
-- 先读 AGENTS、README、ARCHITECTURE、API_CONTRACT、ROADMAP 及本交接；网页启用与验收步骤见 [PREVIEW](PREVIEW.md)。
-- 已实际 fetch 远端：main=`40c334b`，提交说明为 Merge pull request #2 from feat/stage1-virtual-robot。`git merge-base --is-ancestor 5ad49f7 origin/main` 返回 0，确认阶段 1 已合并，不依赖旧交接的推断。
-- 从最新 origin/main 创建独立分支 `deploy/github-pages-preview`。开始时工作区干净，未直接修改 main。
-- 预期公网地址：**https://zhengxiangliu6-bit.github.io/Desktop-NOMI/**。当前 **尚未验证已上线**；GitHub API 与该 Pages 域名均被云代理拒绝连接，无法读取/启用 Pages、读取 Actions 结果或实际公网访问。代理 CONNECT 403 不等于站点返回 404，也不能推断仓库管理员权限缺失。
-- 本次不合并 PR、不发布云环境；部署需本 PR 合并后按 PREVIEW 在 GitHub 网页启用 Source=GitHub Actions。
+先读 AGENTS、README、ARCHITECTURE、当前 API_CONTRACT、backend/README 和本记录。旧 V0 全栈接口草案保存到 docs/design/API_V0_PLANNED.md，仅供后续规划；不能当作已实现接口。
 
-## 修改文件与决策
+本次 `git fetch origin main` 后 main=`7401ce2`，是 Pages 配置 PR #3 的合并提交。工作区开始时干净，从 origin/main 创建独立分支 `feat/stage2a-ai-backend`，没有修改 main。Pages 配置已在 main，但本任务未验证其公网状态，也未触发或改变部署。
 
-- `.github/workflows/pages.yml`：main push、相关 PR 与手动运行；锁文件安装、typecheck、test、build、既有浏览器测试与静态 Pages 测试。只有 main 非 PR 运行上传 frontend/dist 并部署，PR 只有只读检查权限；deploy 使用 pages:write / id-token:write。无供应商 secrets，不上传 .env 或后端。
-- `frontend/vite.config.ts`：固定 `base: "/Desktop-NOMI/"`，大小写与仓库匹配，开发/生产保持一致。
-- `frontend/playwright.config.ts`、`tests/e2e/robot.spec.ts`：既有开发回归入口同步子路径，业务断言保留。
-- `frontend/playwright.pages.config.ts`、`scripts/serve-pages.mjs`、`tests/pages/preview.spec.ts`：真实 Chromium 检查生产 dist 子路径、全部构建资源、刷新、首页导航和 Mock 回复。Node 静态服务器仅测试 fixture，不是应用后端，不上传到 Pages；没有 SPA fallback。
-- `frontend/package.json`：增加 `test:pages`；`tsconfig.json` 纳入新 Playwright 配置。不新增依赖、不更改锁文件。
-- README、ARCHITECTURE、PREVIEW、本 HANDOFF：同步公网地址的预期/实测区别、网页操作、路由与开发地址。`frontend/src/` 完全不变，现有 UI、Mock 行为与 Aora 署名保留。
+## 交付文件
 
-## 执行命令与真实结果
+- `backend/pyproject.toml`、`uv.lock`、`.python-version`：Python 3.12、uv 单一锁定机制、FastAPI / Pydantic / Settings / HTTPX / Uvicorn，开发组 pytest / pytest-asyncio / Ruff。
+- `backend/app/main.py`、`api/routes.py`、`cli.py`：App factory / lifespan、health 与 chat、运行时 OpenAPI、强制单 worker 的本机 CLI。
+- `backend/app/core/`：根 .env + 进程覆盖、脱敏配置/错误、loopback Host / 精确 Origin、64 KiB 流式 body 限制、request_id、无输入/凭据的日志。
+- `backend/app/domain/models.py`：Pydantic 请求、回复、健康与错误 schema；emotion / motion 枚举，固定 system 协议。
+- `backend/app/adapters/llm/`：Provider Protocol、默认 Mock、可配置 OpenAI 兼容非流式 Chat Completions。没有复制第三方源码或硬编码实际模型/域名/密钥。
+- `backend/app/services/conversation.py`：单进程有界内存上下文、会话时效/容量、完整轮次裁剪、并发守卫和失败/取消清理。
+- `backend/tests/`：67 项自动化测试及辅助 fixtures，所有真实 Provider 路径都使用 httpx.MockTransport 和虚构凭据。
+- `.github/workflows/backend.yml`：新增独立只读后端 CI（锁定安装、Ruff、pytest），不修改 pages.yml。
+- `.env.example`、README、backend/README、ARCHITECTURE、API_CONTRACT、ROADMAP、旧契约归档和本交接：实现说明、启动、配置、协议差异与验证限制。
 
-- `git fetch origin main feat/stage1-virtual-robot`：成功。首次使用 origin/feat/stage1-virtual-robot 做祖先检查因该远端跟踪 ref 未创建而失败；随后用已知阶段 1 最终提交 SHA 5ad49f7 对最新 origin/main 检查，返回 0，确认合并。
-- `git switch -c deploy/github-pages-preview origin/main`：成功。
-- 读取官方 actions/starter-workflows 的 pages/static.yml：成功；采用 checkout@v4、configure-pages@v5、upload-pages-artifact@v3、deploy-pages@v5 的官方流程，加 setup-node@v4。
-- `gh api repos/zhengxiangliu6-bit/Desktop-NOMI/pages`：Forbidden，未得到 Pages 配置。没有尝试提取或输出认证值。
-- `curl -I --max-time 20 https://zhengxiangliu6-bit.github.io/Desktop-NOMI/`：代理 CONNECT 403，未建立到站点的连接。**不是公网页面验证通过**。
-- `npm --cache /tmp/nomi-npm-cache ci --prefix frontend`：成功安装 104 个包；项目依赖未变化。实际环境 Node 24.22.1 / npm 11.9.0；Actions 将按 .nvmrc 使用 22.22.2，尚未实际运行 Actions。
-- `npm run typecheck --prefix frontend`：通过。
-- `npm test --prefix frontend`：5 个文件、21 项测试全部通过。
-- `npm run build --prefix frontend`：成功，dist/index.html 的 JS/CSS 使用 /Desktop-NOMI/assets/。主 JS 约 611 kB 的已知提示保留，未屏蔽。
-- `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium npm run test:pages`（frontend 中）：1 项通过，覆盖全部生成资源 200、JS/CSS 前缀、Mock 回复、刷新后清空内存、品牌导航和未定义路由/资源 404。本地通过不等于 GitHub Pages 已上线。
-- 初次既有 e2e 复用之前任务遗留的 Vite 进程，因 npm ci 后其 optimize-deps 缓存过期，React 资源返回 504。用浏览器日志定位后，仅停止本助手启动的旧 dev/preview 进程。
-- `CI=1 PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium npm run test:e2e`：干净启动后 2 项全部通过，未改变业务断言。
-- 原尝试 go run actionlint 未执行：系统 /usr/bin/go 为其他程序，不支持 Go 的 run 命令。随后下载 actionlint 1.7.7 官方发行包和校验清单，`sha256sum --check --ignore-missing` 通过，才解包执行；未绕过验证。
-- `/tmp/nomi-actionlint/actionlint .github/workflows/pages.yml`：通过。
-- 文档相对链接、YAML 结构、必须执行的构建步骤、PR/deploy 权限分离与无 secrets 注入检查：通过。`git diff --check`：通过。
-- Git 提交、推送和 PR 结果见下面的最终交付记录。
+## 当前行为与有意缩小的边界
 
-## 路由与界面验证范围
+- 只实现 `GET /api/v0/health`、`POST /api/v0/chat`；运行时 `/docs` 与 `/openapi.json` 可查看 schema。前端不调用这些接口。
+- 默认 `NOMI_LLM_PROVIDER=mock`，无 Key 可启动，回复与 provider 字段明确标识 Mock。显式 openai 模式要求 BASE_URL / API_KEY / MODEL 齐全，缺失返回 503，不自动冒充 Mock。
+- 结构化模型输出严格为 reply/emotion/motion；非法 JSON、空/超长回复、未知枚举、额外字段、tool/function calls 返回格式错误，不沿用旧草案的 neutral 静默降级。
+- 请求/网络错误 `UPSTREAM_ERROR`，超时 `UPSTREAM_TIMEOUT`，模型格式错误 `UPSTREAM_INVALID_RESPONSE`；统一安全错误体与 request_id，失败不污染成功历史，可手动再请求。
+- 上下文先用进程内存：100 会话、1800 秒空闲时效、10 轮窗口含本轮、16000 字符总预算，均可配置。仅保存成功的完整 user/assistant 对，容量和字符双重限制。字符预算不是精确 token 数；重启即清空。
+- 不实现 SQLite、turn_id/幂等、消息 CRUD、认证、多 worker、语音、主动交互或长期记忆。新 `/chat` 与旧未实现 `/sessions/...` 设计明确区分，2B 应先读当前契约。
+- motion 仅 none/nod/tilt/bounce 的提示，没有工具、shell、文件或硬件执行器。输出文本提到操作不会被执行。
+- OpenAI Adapter 保留正常 TLS/代理配置，远程地址要求 HTTPS，不允许 URL 内嵌凭据/query/fragment，不跟随重定向、无自动重试、无 tools/functions。json_object 模式可选；真实供应商参数兼容性未验证。
 
-唯一入口 `/Desktop-NOMI/`，当前无业务路由。查询参数、刷新和相对首页链接在静态生产测试中正常；任意深层路径不是受支持页面，未添加 404 跳转补丁。开发地址改为本机 5173/Desktop-NOMI/，本机 preview 为 4173/Desktop-NOMI/，只供开发测试，不作为公网交付地址。
+## 执行命令与结果
 
-阶段 1 仍采用 React 19 + TS + Vite、Aora 0.2.0，interaction 与 emotion 分离；Mock 900ms 回复、2400ms 无声 speaking 后恢复 idle，错误可恢复、取消/卸载清理。无模型、网络聊天、录音、语音、数据库或设备控制。Windows / Safari / Firefox / 实体音频尚未验证。
+真实运行环境 Python 3.12.14 / uv 0.13.5；没有向模型服务发出真实请求。
 
-## 下一步（用户仅用 GitHub 网页即可）
+- `git status --short --branch`、`git fetch origin main`、`git log`、`git switch -c feat/stage2a-ai-backend origin/main`：成功。
+- 检查配置元数据及所需变量名称的存在性：本机未设置 NOMI_LLM_PROVIDER / BASE_URL / API_KEY / MODEL，环境也无对应 secret 绑定；未打印任何凭据值，不需要为 Mock 测试请求密钥。
+- `UV_SYSTEM_CERTS=true UV_CACHE_DIR=/tmp/nomi-uv-cache uv sync --project backend --group dev`：从正常 TLS PyPI 安装成功，生成 portable uv.lock（公开 PyPI / files.pythonhosted.org + SHA256）。仅 backend/.venv 与临时缓存为生成物，被忽略。
+- 最初一轮测试有测试源码括号错误，修正后继续；从仓库根执行 pytest 时未加载 backend/pyproject.toml 的 asyncio_mode，导致 36 个异步用例未执行并报失败。改为明确 backend 工作目录后完整重跑，未跳过或削弱断言。后续命令均按下述目录执行。
+- 在 `backend/` 中 `uv lock --check --offline`：通过，锁与声明一致。
+- 在 `backend/` 中 `uv sync --frozen --group dev`：通过，可复用锁文件安装。
+- 在 `backend/` 中 `uv run --frozen ruff check .`：通过；`uv run --frozen ruff format --check .`：通过，27 个 Python 文件已格式化。
+- 在 `backend/` 中 `uv run --frozen pytest -q`：**67 passed，1 warning**。覆盖 Mock 正常聊天、请求输入、枚举/格式异常、真实适配器假 HTTP 路径、请求/连接错误、上游和总期限超时恢复、完整轮次/字符预算、容量/时效、并发、取消、会话隔离、流式 body 大小、Host/Origin、脱敏与 CLI 单 worker。
+- 上述命令在云端添加 `UV_SYSTEM_CERTS=true UV_CACHE_DIR=/tmp/nomi-uv-cache` 以复用正常系统 CA 和可写缓存；未关闭验证。
+- 唯一 pytest warning 为上游 Starlette TestClient 对 httpx 的弃用提示，未屏蔽，当前测试仍真实执行通过；未来升级测试客户端需重跑。
+- 本地实进程启动：`NOMI_LLM_PROVIDER=mock uv run --frozen python -m app.cli`。HTTP 烟测验证 health 200、结构化 Mock reply、同 session_id 连续对话、422 错误/request_id 与 OpenAPI ErrorEnvelope schema，均通过；本助手已停止该服务。它不是公网部署，亦不是真实 AI 验证。
+- `/tmp/nomi-actionlint/actionlint .github/workflows/backend.yml`：通过。GitHub Actions 尚未在远端运行，不能声称 CI 已通过。
+- 文档链接/JSON/TOML/代码围栏、空凭据示例、忽略规则、公开包索引检查：通过。`git diff --check`：通过。
+- `git diff --name-only origin/main -- frontend .github/workflows/pages.yml`：为空，确认前端和 Pages 无改动，因此未无意义重复运行未改动的前端测试。
 
-1. 将本次部署分支通过 PR 合并 main（若 API 创建受阻，compare 页面可手动创建）。
-2. Settings → Actions 确认可用；Settings → Pages → Source 选择 GitHub Actions。
-3. Actions → Mock preview on GitHub Pages → Run workflow，选择 main；按要求批准 github-pages environment。
-4. build/deploy 成功后从输出地址真实访问，检查 Mock、资源、刷新和首页导航，并记录 Actions run URL、部署 SHA 与浏览器结果。
-5. 若本云端需要继续自动创建 PR 或验证，环境网络还需允许 api.github.com 和 zhengxiangliu6-bit.github.io；GitHub API 认证能力需另行验证，Git 读写成功不代表 API 可用。不要在聊天发送 Token。
+## 未执行与已知限制
 
-本阶段仅在线预览；后续功能仍需新授权。Pages 无法启用时须按 GitHub 网页具体报错处理，不要擅自改成有密钥的部署或真实 AI 后端。
+- **真实账号凭据、真实供应商/模型回复、真实计费、远端 TLS/API 可达性与跨供应商兼容性：全部未执行。** MockTransport 通过不能代替这些验证，也不能据此声称真实 AI 已连通。
+- Windows 实机、前端集成、Pages 到后端连接、麦克风/扬声器、设备均未执行/未实现。
+- 本服务无认证，仅本机开发。不得直接公网部署，也不能用放开 CORS 来代替后续身份与网络方案。
+- 无持久化、多进程共享或幂等；手动重试真实模型可能重复计费，客户端断线不能保证供应商停止生成。
+- 旧全栈目标中 SQLite、完整 session/message 路由与幂等未实现，不将 2A 误记为原 V0.2 全量完成。
+
+## 下一步
+
+阶段 2B 才做前端 API Client、结构化回复/错误映射及明确的连接方案，保留可见的 Mock/真实模式标识。不要自动扩展语音、硬件、真实模型烟测或公网后端。本机启动：`cd backend` → `uv sync --frozen --group dev` → `uv run --frozen python -m app.cli`；详细变量与限制见 backend/README。
+
+提交、推送与 PR 结果在最终交付记录追加。若 API 仍被云代理拒绝，保留远端独立分支并提供 GitHub compare 入口；不能声称 PR 已创建。不要求用户在聊天发送任何 Key。
 
 ## 最终交付记录
 
-- `4f54f4c`：部署配置与说明提交成功。
-- `git push -u origin deploy/github-pages-preview`：成功，GitHub 接受包括 workflow 在内的分支文件，未遇到 workflow 推送权限拒绝。文件已在远端分支，但这不代表工作流已在 main 激活或运行。
-- `gh pr create --repo zhengxiangliu6-bit/Desktop-NOMI --base main --head deploy/github-pages-preview --title "ci: 为阶段 1 添加 GitHub Pages 在线预览" --body-file /tmp/nomi-pages-pr.md`：失败，`Post https://api.github.com/graphql: Forbidden`；**PR 未创建**。
-- 可在网页创建 PR：https://github.com/zhengxiangliu6-bit/Desktop-NOMI/compare/main...deploy/github-pages-preview?expand=1 。分支所有变更已具备审查条件。
-- Pages 启用、Actions 执行和公网访问均未获得证据，仍标记为未验证。网页操作与验收清单见 PREVIEW。
-- 本补充记录再提交并推送同一分支；最新提交以 `git log -1` 为准。不合并 PR，不发布云环境。
+- 提交 `fe968ae`：`feat: add standalone FastAPI chat backend with validated providers`。
+- `git push -u origin feat/stage2a-ai-backend`：成功，GitHub 接受后端与独立 CI 文件，main 未修改。
+- `gh pr create --repo zhengxiangliu6-bit/Desktop-NOMI --base main --head feat/stage2a-ai-backend --title "feat: 阶段 2A 独立 FastAPI AI 后端基础" --body-file /tmp/nomi-stage2a-pr.md`：失败，`Post https://api.github.com/graphql: Forbidden`；**PR 未创建**，不能声称 CI 已在 GitHub 执行。
+- 手动 PR 入口：https://github.com/zhengxiangliu6-bit/Desktop-NOMI/compare/main...feat/stage2a-ai-backend?expand=1 。API 可访问且授权有效后可重试创建；临时 body 文件若丢失，依据本交接重建描述。
+- 本记录另作后续文档提交并推送同一分支；最新提交以 `git log -1` 为准。未合并、未部署、未调用真实模型，未修改前端和 Pages。

@@ -4,7 +4,20 @@
 
 ## 当前状态
 
-当前为 **阶段 1：虚拟机器人前端原型**。`frontend/` 已可运行：中央 Aora 圆形角色、响应式聊天外壳、纯本地 Mock 回复、阶段/情绪独立管理、可折叠调试与错误恢复。界面明确标识 Mock；没有后端、真实 AI、录音、语音播放、持久化或硬件控制。HTTP 接口文档仍为未来设计。
+当前为 **阶段 1：虚拟机器人前端原型**。`frontend/` 已可运行：中央 Aora 圆形角色、响应式聊天外壳、纯本地 Mock 回复、阶段/情绪独立管理、可折叠调试与错误恢复。界面明确标识 Mock，尚未接后端、真实 AI 或语音。阶段 2A 已新增独立 Python FastAPI 对话服务，支持可配置 OpenAI 兼容 Provider 与结构化校验；真实账号验证未执行。无持久化或硬件控制，前端集成留到 2B。
+
+## 阶段 2A：独立 AI 后端
+
+前端及 Pages 保持阶段 1 Mock 体验，未连接后端。后端默认 Mock，无需 API Key，Python 3.12 + uv：
+
+```bash
+cd backend
+uv sync --frozen --group dev
+uv run --frozen pytest
+uv run --frozen python -m app.cli
+```
+
+已实现 `GET /api/v0/health` 与 `POST /api/v0/chat`，返回经过 Pydantic 校验的 reply、emotion、motion。Base URL / Key / Model 均由后端环境变量配置。上下文只存在有界单进程内存，重启清空；motion 不执行任何本机或硬件操作。真实供应商账号/兼容性验证 **未执行**。安装、配置、错误和限制见 [后端说明](backend/README.md) 与 [当前接口契约](docs/API_CONTRACT.md)。
 
 ## 在线预览（GitHub Pages）
 
@@ -68,7 +81,7 @@ Linux 云端已安装 Chromium 时可执行 `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH
 | 硬件 | 预留 Device Adapter；V0 仅 Null / Mock，不控制真实设备 |
 | 测试 | 计划 pytest、Vitest / React Testing Library、Playwright；随对应阶段引入 |
 
-前端使用 npm 和 package-lock 锁定依赖；Node 最低版本由实际测试工具要求调整为上文版本。Python 3.12 仍是未来后端计划。后端密钥不使用 `VITE_` 前缀，不进入浏览器构建。
+前端使用 npm 和 package-lock 锁定依赖；Node 最低版本由实际测试工具要求调整为上文版本。后端 Python 3.12 工程已建立，使用独立 uv.lock。后端密钥不使用 `VITE_` 前缀，不进入浏览器构建。
 
 ## 文档与开发阶段
 
@@ -76,13 +89,13 @@ Linux 云端已安装 Chromium 时可执行 `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH
 
 V0.0 规范 → V0.1 工程骨架与表情 → V0.2 文字对话 → V0.3 情绪联动 → V0.4 语音 → V0.5 Windows 验收。长期记忆、主动交互和真实硬件属于后续版本。
 
-阶段 1 按新任务授权先交付前端 Mock 交互，未完成原 V0.1 的 FastAPI/health 及 Windows 验收，亦未实现 V0.2/V0.3 的真实服务。前端测试位于 `frontend/src/**/*.test.*` 与 `frontend/tests/e2e/`；`backend/` 和根 `tests/` 尚未创建。
+阶段 1 按新任务授权先交付前端 Mock 交互，未完成原 V0.1 的 FastAPI/health 及 Windows 验收，亦未实现 V0.2/V0.3 的真实服务。前端测试位于 `frontend/src/**/*.test.*` 与 `frontend/tests/e2e/`；阶段 2A 的后端及 pytest 位于 `backend/`，根 `tests/` 尚未创建；全栈 SQLite/幂等与真实前端集成仍未交付。
 
 ## 配置与安全
 
-根目录 `.env.example` 仅是变量契约，复制为 `.env` 后由未来后端显式加载；当前没有加载器。当前前端不读取 API 配置；未来可在 `frontend/.env.local` 单独配置公开的 `VITE_API_BASE_URL`。不要把整个根目录 `.env` 暴露给 Vite。
+后端已通过 Pydantic Settings 加载根目录 `.env`，进程环境优先；根 `.env.example` 只有空凭据与非敏感默认值，Mock 无需配置。当前前端不读取 API 配置；未来可在 `frontend/.env.local` 单独配置公开的 `VITE_API_BASE_URL`。不要把整个根目录 `.env` 暴露给 Vite。
 
-未来后端默认仅本机使用，FastAPI 绑定 `127.0.0.1`，精确限制开发来源；当前 Pages 在线预览只有静态前端，不包含该后端。真实会话和音频不入 Git。云端检查不能替代 Windows 麦克风、扬声器与浏览器权限的人工验收。
+阶段 2A 后端仅本机使用，FastAPI 绑定 `127.0.0.1`，精确限制开发来源；当前 Pages 在线预览只有静态前端，不包含该后端。真实会话和音频不入 Git。云端检查不能替代 Windows 麦克风、扬声器与浏览器权限的人工验收。
 
 ## 第三方与许可
 
