@@ -1,0 +1,51 @@
+# Secrets and per-machine configuration
+.env
+.env.*
+!.env.example
+**/.env
+**/.env.*
+!**/.env.example
+*.pem
+*.key
+
+# Local conversation data, recordings and logs
+.local/
+data/
+recordings/
+*.db
+*.db-*
+*.sqlite
+*.sqlite3
+*.sqlite3-*
+*.wav
+*.webm
+*.mp3
+*.log
+
+# Frontend / Node
+node_modules/
+dist/
+coverage/
+.vite/
+*.tsbuildinfo
+playwright-report/
+test-results/
+
+# Python
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+*.egg-info/
+build/
+
+# Editors and OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
