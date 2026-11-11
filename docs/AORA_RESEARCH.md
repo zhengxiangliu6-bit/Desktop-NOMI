@@ -11,7 +11,7 @@
 
 ## 安装与用法
 
-上游示例使用 pnpm，但包是标准 npm ESM 发布；项目按用户要求选择 npm。未来 V0.1 在已建立的 frontend 工程中执行：
+上游示例使用 pnpm，但包是标准 npm ESM 发布；项目按用户要求选择 npm。阶段 1 已在 frontend 工程中通过 npm 安装并锁定此版本；独立添加命令为：
 
 ```bash
 npm install --save-exact @aora-bot/react@0.2.0
@@ -23,11 +23,11 @@ React / React DOM 19 为前置依赖，engine 自动安装，无需单独添加�
 import { CharacterMark } from '@aora-bot/react';
 import '@aora-bot/react/styles.css'; // 在应用入口导入一次
 
-// 说明用法；当前仓库未实现组件
+// 上游基础示例；本项目 RobotView 使用 circle / cream
 <CharacterMark shape="mochi" state="happy" sizePx={96} />;
 ```
 
-已核对发布包 CharacterMarkProps：支持 shape、state、emotionId、sizePx、face、styleId 等；同时给 state 与 emotionId 时 state 优先。44 个动画状态包含 idle/listening/thinking/happy/confused/humming，不含 speaking，项目 speaking 暂映射 humming。内部数字情绪协议与 AgentStateProvider 可用，但本项目先以自己的语义协议加 Adapter 隔离，不把 SDK 数据结构扩散至后端。
+已核对发布包 CharacterMarkProps：支持 shape、state、emotionId、sizePx、face、styleId 等；同时给 state 与 emotionId 时 state 优先。44 个动画状态包含 idle/listening/thinking/happy/confused/humming，不含 speaking，项目 Mock speaking 在 neutral 时映射 humming，其他情绪保留对应表情；不声称精准口型。内部数字情绪协议与 AgentStateProvider 可用，但本项目先以自己的语义协议加 Adapter 隔离，不把 SDK 数据结构扩散至后端。
 
 ## 实测与限制
 
@@ -42,3 +42,7 @@ Node SSR 的 CharacterMark 只输出 `<span class="aora-mark" ...>` 容器，SVG
 免费资格公开发布须注明 Powered by Aora Bot 并链接上游；README 已保留。不得将引擎主体单独转售、提供以角色/头像/表情为主要价值的托管服务、单售角色商品、注册角色商标、用角色设计训练生成模型或删除许可声明。将来机器人硬件分发同样需检查条款，不能假设原型许可覆盖量产。
 
 升级时核对完整 LICENSE / LICENSE-COMMERCIAL、团队资格、API、传递依赖、动画性能和视觉回归，并更新锁文件与本记录。项目自身 LICENSE 待拥有者确定；不擅自给整个项目添加会覆盖第三方权利的许可证。React、Vite、FastAPI 等计划依赖通常为 MIT，TypeScript 为 Apache-2.0；以未来锁定版本及其传递依赖的实际许可为准，目前未完成整个应用依赖审计。
+
+## 阶段 1 补充验证
+
+重新查询 npm latest 仍为 0.2.0，前端 package-lock 保留发布 integrity；实际 TypeScript 验证 shape 应为 circle，dot 属于角色标识。Playwright 在 Linux 系统 Chromium 中验证真实 SVG 挂载、idle 连续帧变化和手机视口；启用 autoPause 处理 reduced-motion 与离屏暂停。Windows 实机尚未验证。完整安装无需下载或复制上游仓库。

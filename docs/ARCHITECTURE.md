@@ -1,6 +1,27 @@
 # 技术架构（V0 目标设计）
 
-状态：设计基线，所有模块尚未实现。接口字段以 [API_CONTRACT](API_CONTRACT.md) 为准，阶段以 [ROADMAP](ROADMAP.md) 为准。
+状态：前端阶段 1 Mock 原型已实现；以下全栈模块仍为目标设计，后端尚未实现。接口字段以 [API_CONTRACT](API_CONTRACT.md) 为准，阶段以 [ROADMAP](ROADMAP.md) 为准。
+
+## 阶段 1 已实现边界
+
+当前运行链路：App → useRobotController → 本地 mockChat → reducer → RobotView / ChatPanel；Expression Adapter 为唯一 Aora 状态映射。没有 HTTP client、后端、语音或数据库。此次用户明确授权前端聊天外壳与 Mock 情绪展示，不视为提前实现真实 V0.2/V0.3。
+
+- `frontend/src/app/`：页面装配、柔和响应式样式。
+- `frontend/src/features/robot/`：领域类型、reducer、带 AbortController 的控制器、RobotView、DebugPanel。
+- `frontend/src/features/conversation/`：输入与内存消息列表。
+- `frontend/src/services/mockChat.ts`：确定性关键词预设、900ms 延迟、可取消等待与 `/error` 场景。
+- `frontend/src/adapters/expression/`：唯一 Aora 映射；`shape="circle"`、cream、cute。`dot` 属角色标识而非 shape，不混用。
+- 前端单元测试与组件测试就近放置；浏览器测试为 `frontend/tests/e2e/`，从 frontend 的 Playwright 配置运行，不创建空根 tests。
+
+本阶段交互状态为 idle/listening/thinking/speaking/error；情绪为 neutral/happy/sad/curious/surprised/angry/concerned。angry 是本地预览扩展，尚未更改未来 HTTP Emotion 枚举。
+
+Mock 流程 idle → thinking → speaking + 情绪 → idle。speaking 仅是 2400ms 无声展示，情绪非 neutral 时显示对应原生表情，neutral 映射 humming；未来真实语音仍按后文工作态优先的目标协议设计，再明确迁移方案。listening 仅调试预览，不录音。预览也使用同一控制器锁，2400ms 到期恢复。
+
+reducer 守卫非法顺序，ref 锁阻止同一事件周期重复提交；操作级 AbortController 与身份检查隔离迟到结果，卸载清理所有本地计时器。停止保留已有聊天，不自动补发请求。错误后必须恢复待机再发送。消息仅内存保留最近 60 条，不使用 localStorage 或 SQLite。
+
+Aora `autoPause=true` 负责离屏、隐藏与 prefers-reduced-motion 动画暂停，CSS 同时关闭自有脉冲动画；工作状态另有文字。原生浏览器测试验证真实 SVG 挂载及待机帧变化。
+
+前端使用严格 TypeScript、npm 精确版本与 package-lock；Node 基线 22.22.2+ / 24.15.0+，这是 jsdom 31 等锁定工具要求。本次实际验证 Node 24.22.1，Node 22 尚未单独实测。没有 Python 依赖清单。
 
 ## 边界与依赖方向
 
@@ -26,7 +47,7 @@ flowchart LR
 
 ## 目录规划
 
-下列目录在相应阶段创建；当前只保留文档与配置示例。
+下列为完整目标布局；实际已实现的前端目录见上节，剩余目录在相应阶段创建。
 
 ```text
 frontend/
@@ -53,7 +74,7 @@ tests/contract/            跨端契约测试（根目录 tests，下同）
 tests/e2e/                 端到端与 Windows 验收记录
 ```
 
-依赖与锁文件到 V0.1 才添加：npm + package-lock，Python 使用标准 pyproject 并选择一种锁定方式。不得同时引入多套锁文件。Python 3.12 / Node 22 LTS 为计划基线，需在 Windows 与 CI 中落实版本约束。
+前端已添加 npm + package-lock；未来后端 Python 使用标准 pyproject 并选择一种锁定方式。不得同时引入多套锁文件。Python 3.12 为计划基线，Node 前端要求见上节，需在 Windows 与 CI 中落实版本约束。
 
 ## 模块职责
 
