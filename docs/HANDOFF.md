@@ -63,3 +63,11 @@
 阶段 2B 才做前端 API Client、结构化回复/错误映射及明确的连接方案，保留可见的 Mock/真实模式标识。不要自动扩展语音、硬件、真实模型烟测或公网后端。本机启动：`cd backend` → `uv sync --frozen --group dev` → `uv run --frozen python -m app.cli`；详细变量与限制见 backend/README。
 
 提交、推送与 PR 结果在最终交付记录追加。若 API 仍被云代理拒绝，保留远端独立分支并提供 GitHub compare 入口；不能声称 PR 已创建。不要求用户在聊天发送任何 Key。
+
+## 最终交付记录
+
+- 提交 `fe968ae`：`feat: add standalone FastAPI chat backend with validated providers`。
+- `git push -u origin feat/stage2a-ai-backend`：成功，GitHub 接受后端与独立 CI 文件，main 未修改。
+- `gh pr create --repo zhengxiangliu6-bit/Desktop-NOMI --base main --head feat/stage2a-ai-backend --title "feat: 阶段 2A 独立 FastAPI AI 后端基础" --body-file /tmp/nomi-stage2a-pr.md`：失败，`Post https://api.github.com/graphql: Forbidden`；**PR 未创建**，不能声称 CI 已在 GitHub 执行。
+- 手动 PR 入口：https://github.com/zhengxiangliu6-bit/Desktop-NOMI/compare/main...feat/stage2a-ai-backend?expand=1 。API 可访问且授权有效后可重试创建；临时 body 文件若丢失，依据本交接重建描述。
+- 本记录另作后续文档提交并推送同一分支；最新提交以 `git log -1` 为准。未合并、未部署、未调用真实模型，未修改前端和 Pages。
