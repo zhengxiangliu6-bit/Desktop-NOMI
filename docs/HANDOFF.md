@@ -111,3 +111,11 @@ frontend/tests/integration/chat.spec.ts
 frontend/tsconfig.json
 frontend/vite.config.ts
 ```
+
+## 最终交付记录
+
+- 实现提交 `58e7d40`：`feat: integrate frontend chat with local FastAPI service`。
+- `git push -u origin feat/stage2b-chat-integration`：成功，main 未修改。
+- `gh pr create --repo zhengxiangliu6-bit/Desktop-NOMI --base main --head feat/stage2b-chat-integration --title "feat: 阶段 2B 前后端文字对话与情绪集成" --body-file /tmp/nomi-stage2b-pr.md`：失败，`Post https://api.github.com/graphql: Forbidden`；本助手未能创建 PR，不声称远端 CI 已执行。
+- 准确 compare 入口：https://github.com/zhengxiangliu6-bit/Desktop-NOMI/compare/main...feat/stage2b-chat-integration?expand=1 。API 可访问且授权有效后可重试；临时说明文件丢失时依据本交接重建描述。
+- 本记录另作后续文档提交并推送同一分支，最新提交见 `git log -1`。未合并、未发布、未调用真实收费模型。
