@@ -1,0 +1,39 @@
+name: Backend checks
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "backend/**"
+      - ".github/workflows/backend.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "backend/**"
+      - ".github/workflows/backend.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v6
+        with:
+          python-version-file: backend/.python-version
+      - name: Install uv
+        run: python -m pip install uv==0.13.5
+      - name: Install locked dependencies
+        run: uv sync --frozen --group dev
+      - name: Lint
+        run: uv run --frozen ruff check .
+      - name: Format check
+        run: uv run --frozen ruff format --check .
+      - name: Test without provider credentials
+        run: uv run --frozen pytest

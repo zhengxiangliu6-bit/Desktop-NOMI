@@ -1,6 +1,6 @@
 # V0 路线图
 
-阶段按依赖顺序推进，每次任务只实现明确授权阶段。V0.0 已交付，阶段 1 前端 Mock 原型已实现；原全栈 V0.1 的后端/health/Windows 验收仍未完成。以下全栈阶段验收门槛不因此视为全部通过。
+阶段按依赖顺序推进，每次任务只实现明确授权阶段。V0.0 已交付，阶段 1 前端 Mock 原型已实现；阶段 2A 已交付后端基础与 health，Windows 实机及全栈集成验收仍未完成。以下全栈阶段验收门槛不因此视为全部通过。
 
 | 阶段 | 范围 | 验收标准 |
 | --- | --- | --- |
@@ -16,6 +16,12 @@
 范围为 Aora 角色、响应式聊天外壳、明显标识的 Mock Service、阶段/情绪分离、取消与错误恢复、调试面板。无 Python 后端、真实 AI、录音或声音。此实现不等于完成真实文字对话与模型情绪解析阶段。
 
 验收命令：`cd frontend` 后依次 `npm ci`、`npm run typecheck`、`npm test`、`npm run build`；浏览器验收 `npm run test:e2e`（先安装 Playwright Chromium，或配置已有 Chromium 路径）。Windows 手动步骤见 README。本次执行结果与限制见 HANDOFF。
+
+## 阶段 2A 独立后端（本次授权）
+
+已实现 FastAPI health/chat、环境配置、Mock/OpenAI 兼容 Provider、严格 reply/emotion/motion 输出校验、请求/超时/格式错误区分及有界进程内上下文。验收为无 Key 的 pytest、MockTransport、错误恢复/长度限制、真实本地 HTTP 烟测，以及前端和 Pages 无变更。真实供应商账号验证未执行。
+
+阶段 2B 才进行前端 API 集成，必须重新确定连接方式和用户配置入口；本次不实现 SQLite、turn_id/幂等、语音、动作执行或公网后端。原 V0.2 全量验收不能因 2A 完成而标为通过。
 
 ## 测试责任
 
