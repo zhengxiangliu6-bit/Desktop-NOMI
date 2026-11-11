@@ -40,3 +40,8 @@
 
 - `python /tmp/check_nomi_docs.py`：通过；9 个必需文件、8 个相对链接、3 个 JSON 示例、代码围栏、配置占位值、7 项忽略规则和无占位业务目录检查通过。检查脚本仅位于临时目录，非业务测试套件。
 - `git diff --check`：通过。上述结果只表示文档与配置检查，不代表应用测试通过。
+- `git commit -m "docs: establish V0 architecture and development standards"`：成功，初始文档提交 `b44270d`。
+- `git push -u origin docs/v0-architecture`：成功，远端分支已存在，main 未修改。
+- `gh pr create --repo zhengxiangliu6-bit/Desktop-NOMI --base main --head docs/v0-architecture --title "docs: 建立 Desktop-NOMI V0 架构与开发规范" --body-file /tmp/nomi-pr-body.md`：失败，`Post https://api.github.com/graphql: Forbidden`。PR 未创建；已知 CONNECT 403 仍阻止 API，不能声称已提交 PR。
+- 手动创建入口：https://github.com/zhengxiangliu6-bit/Desktop-NOMI/compare/main...docs/v0-architecture?expand=1 。当前工具未提供可调用的浏览器控制能力。允许 API 后可重跑上述 gh 命令；若临时 body 文件已丢失，从本交接与 README 重建说明，勿使用不存在的文件。
+- 本交接补充以第二个文档提交保存并推送同一分支；无需发布云环境。最新提交以 `git log -1` 为准。
