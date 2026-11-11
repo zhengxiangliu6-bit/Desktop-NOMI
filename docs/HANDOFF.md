@@ -46,7 +46,10 @@
 
 ## Git 交付
 
-待本次提交、推送与 PR 尝试后记录实际结果；不合并、不发布。
+- 实现提交 `c802a41`：`feat: add secure local AI configuration center`；已成功推送 `origin/feat/stage2c-local-ai-settings`。
+- `gh pr create --repo zhengxiangliu6-bit/Desktop-NOMI --base main --head feat/stage2c-local-ai-settings --title "feat: 阶段 2C 安全本地 AI 配置中心" --body-file /tmp/nomi-stage2c-pr.md` 失败：`Post "https://api.github.com/graphql": Forbidden`。未创建 PR，不声称远端 CI 已运行。
+- 用户可在 GitHub 网页创建 PR：https://github.com/zhengxiangliu6-bit/Desktop-NOMI/compare/main...feat/stage2c-local-ai-settings?expand=1 。描述可依据本交接及 LOCAL_AI_SETTINGS 重建。
+- 本交付记录另作文档提交推送同一分支。没有合并、发布或收费模型调用。
 
 ---
 
