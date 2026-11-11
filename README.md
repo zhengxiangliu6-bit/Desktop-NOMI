@@ -4,7 +4,48 @@
 
 ## 当前状态
 
-当前为 **V0.0 架构基线**：只有规范与设计，没有可运行应用、聊天界面、AI 请求或语音实现。文档中的接口及目录均为目标设计，不代表已经可用。不要运行尚不存在的启动或测试脚本。
+当前为 **阶段 1：虚拟机器人前端原型**。`frontend/` 已可运行：中央 Aora 圆形角色、响应式聊天外壳、纯本地 Mock 回复、阶段/情绪独立管理、可折叠调试与错误恢复。界面明确标识 Mock；没有后端、真实 AI、录音、语音播放、持久化或硬件控制。HTTP 接口文档仍为未来设计。
+
+## 启动与预览
+
+需要 Node.js **22.22.2+（22 系列）或 24.15.0+（24 系列）**，以及 npm；`frontend/.nvmrc` 固定 22.22.2。本次云端实际验证 Node 24.22.1 / npm 11.9.0。无需 `.env` 或 API Key。
+
+```bash
+cd frontend
+npm ci
+npm run dev
+```
+
+在运行命令的电脑上，用浏览器访问 `http://127.0.0.1:5173`。这不是已部署的公网预览；云端 loopback 地址无法直接从你的 Windows 浏览器访问。可在 Windows 拉取分支后执行相同命令，或查看本次生成的桌面/手机截图。开发服务器默认仅监听本机，不建议直接开放到局域网。
+
+```bash
+# 均在 frontend/ 中执行
+npm run typecheck
+npm test
+npm run build
+npm run preview
+```
+
+生产构建输出 `frontend/dist/`，preview 在本机 `http://127.0.0.1:4173` 提供静态预览。以上命令同时适用于 PowerShell，无需 Bash 环境变量写法。
+
+浏览器测试（可选额外安装 Chromium，首次需要网络）：
+
+```bash
+cd frontend
+npx playwright install chromium
+npm run test:e2e
+```
+
+Linux 云端已安装 Chromium 时可执行 `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium npm run test:e2e`；Windows 若使用自有 Chromium，可在 PowerShell 设置 `$env:PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` 为其完整路径。测试会自动启动/停止自己的 Vite 服务，截图写入 `frontend/test-results/desktop.png` 与 `mobile.png`（被 Git 忽略）。
+
+## 手动验收
+
+1. 打开页面：确认「MOCK 模式」、大型奶油色圆形角色、自然待机和 Aora 署名；手机宽度无横向溢出。
+2. 输入「你好」发送：thinking → 无声 speaking + happy → 2.4 秒后 idle；发送后 0.9 秒得到预设回复。忙碌时不能重复提交，可「停止演示」。Enter 发送，Shift+Enter 换行，中文输入法选词回车不应误发。
+3. 输入「今天很累」「哇，惊喜」「为什么？」分别检查 sad、surprised、curious；普通文字返回 neutral。刷新页面清空聊天；只保留本页最近 60 条，不写浏览器存储。
+4. 展开「开发调试」，逐个预览交互阶段和情绪，检查 Aora state；listening 不申请麦克风权限，speaking 不播放声音。预览 2.4 秒后自动恢复。
+5. 点击「模拟错误」（或发送 `/error`），确认错误提示、发送禁用；点击「恢复待机」后可重新对话。停止一个在途回复后发送新消息，旧结果不能覆盖新状态。
+6. 开启系统「减少动态效果」，确认停止持续动画但仍能显示状态和聊天。Windows 实机与实体音频能力未在云端验证。
 
 ## 目标与技术栈
 
@@ -19,7 +60,7 @@
 | 硬件 | 预留 Device Adapter；V0 仅 Null / Mock，不控制真实设备 |
 | 测试 | 计划 pytest、Vitest / React Testing Library、Playwright；随对应阶段引入 |
 
-开发基线计划 Node.js 22 LTS（至少 22.12）、npm、Python 3.12。V0.1 创建真实清单和锁文件后，才提供经过验证的安装命令。后端密钥不使用 `VITE_` 前缀，不进入浏览器构建。
+前端使用 npm 和 package-lock 锁定依赖；Node 最低版本由实际测试工具要求调整为上文版本。Python 3.12 仍是未来后端计划。后端密钥不使用 `VITE_` 前缀，不进入浏览器构建。
 
 ## 文档与开发阶段
 
@@ -27,14 +68,20 @@
 
 V0.0 规范 → V0.1 工程骨架与表情 → V0.2 文字对话 → V0.3 情绪联动 → V0.4 语音 → V0.5 Windows 验收。长期记忆、主动交互和真实硬件属于后续版本。
 
-规划的 `frontend/`、`backend/`、`tests/` 在架构文档中定义；当前不创建占位代码。各阶段验收通过后再进入下一阶段。
+阶段 1 按新任务授权先交付前端 Mock 交互，未完成原 V0.1 的 FastAPI/health 及 Windows 验收，亦未实现 V0.2/V0.3 的真实服务。前端测试位于 `frontend/src/**/*.test.*` 与 `frontend/tests/e2e/`；`backend/` 和根 `tests/` 尚未创建。
 
 ## 配置与安全
 
-根目录 `.env.example` 仅是变量契约，复制为 `.env` 后由未来后端显式加载；当前没有加载器。前端未来在 `frontend/.env.local` 单独配置公开的 `VITE_API_BASE_URL`。不要把整个根目录 `.env` 暴露给 Vite。
+根目录 `.env.example` 仅是变量契约，复制为 `.env` 后由未来后端显式加载；当前没有加载器。当前前端不读取 API 配置；未来可在 `frontend/.env.local` 单独配置公开的 `VITE_API_BASE_URL`。不要把整个根目录 `.env` 暴露给 Vite。
 
 默认仅本机使用，FastAPI 绑定 `127.0.0.1`，精确限制开发来源，不对局域网开放。真实会话和音频不入 Git。云端检查不能替代 Windows 麦克风、扬声器与浏览器权限的人工验收。
 
 ## 第三方与许可
 
 Powered by [Aora Bot](https://github.com/sam70361/aora-bot)。其 npm 包采用 **Aora Bot License 1.1**，并非 MIT；免费资格、署名及商业使用限制见调研文档。项目自身尚未选择许可证，不应推定已获得开源再分发授权。公开发行前确认项目许可、依赖许可、角色使用和 NOMI 相关品牌边界。
+
+## 已知限制
+
+- Mock 依关键词返回固定文本，不具备模型推理、真实记忆或语音能力；演示完成时间固定，不代表语速。
+- 浏览器已验证 Linux Chromium 桌面和 375px 手机视口；Windows、Safari、Firefox 及实体手机仍需本机验收。
+- 生产构建成功，但主 JS 约 611 kB（gzip 约 213 kB），触发 Vite 的 500 kB 提示；Aora 聚合入口和主题动态块为后续性能优化项，当前不为消除提示改动上游源码。

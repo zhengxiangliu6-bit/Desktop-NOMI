@@ -1,6 +1,6 @@
 # 前后端接口契约 v0（设计稿）
 
-所有端点尚未实现；按 ROADMAP 阶段交付。基础路径 `/api/v0`，UTF-8 JSON、字段 snake_case、时间 RFC3339 UTC（`Z`）。ID 使用 UUID 字符串；客户端生成 turn_id，服务端生成其余 ID。未知请求字段拒绝；消费者忽略新增响应字段。无认证仅限本机原型，网络安全边界见 ARCHITECTURE。
+所有 HTTP 端点尚未实现；阶段 1 前端只调用本地 Mock Service，不发出 API 请求、不要求凭据。Mock 的 listening/speaking 是无语音展示，angry 为本地演示扩展，不作为 HTTP 协议变更；本契约仍按后续 ROADMAP 阶段交付。基础路径 `/api/v0`，UTF-8 JSON、字段 snake_case、时间 RFC3339 UTC（`Z`）。ID 使用 UUID 字符串；客户端生成 turn_id，服务端生成其余 ID。未知请求字段拒绝；消费者忽略新增响应字段。无认证仅限本机原型，网络安全边界见 ARCHITECTURE。
 
 ## 通用对象
 
