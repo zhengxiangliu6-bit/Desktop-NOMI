@@ -28,6 +28,7 @@
     "vite.config.ts",
     "playwright.config.ts",
     "tests",
-    "playwright.pages.config.ts"
+    "playwright.pages.config.ts",
+    "playwright.integration.config.ts"
   ]
 }

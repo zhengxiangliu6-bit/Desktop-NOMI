@@ -638,3 +638,32 @@ footer a {
     scroll-behavior: auto !important;
   }
 }
+
+.session-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0 0 16px;
+  font-size: 11px;
+  color: #73816c;
+}
+.session-controls button {
+  border: 1px solid #cfd9c5;
+  background: #fffefa;
+  color: #587761;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 12px;
+}
+.session-notice {
+  font-size: 12px;
+  line-height: 1.7;
+  background: #f3ecdf;
+  border-radius: 10px;
+  padding: 12px;
+  color: #806a4c;
+}
+.debug-content dl {
+  flex-wrap: wrap;
+}

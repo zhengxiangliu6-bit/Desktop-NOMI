@@ -1,12 +1,7 @@
 import type { Emotion } from "../features/robot/model";
-export interface ChatReply {
-  text: string;
-  emotion: Emotion;
-}
-export type ChatService = (
-  text: string,
-  signal: AbortSignal,
-) => Promise<ChatReply>;
+import type { ChatService } from "./chatService";
+import { ChatServiceError } from "./chatErrors";
+export type { ChatService, ChatReply } from "./chatService";
 export const MOCK_DELAY_MS = 900;
 export const SPEAKING_MS = 2400;
 export const PREVIEW_MS = 2400;
@@ -31,10 +26,12 @@ export function delay(ms: number, signal: AbortSignal): Promise<void> {
 }
 
 /** Deterministic local rules. No network, credentials, speech or persistence. */
-export const mockChat: ChatService = async (text, signal) => {
+const preset = async (
+  text: string,
+  signal: AbortSignal,
+): Promise<{ text: string; emotion: Emotion }> => {
   await delay(MOCK_DELAY_MS, signal);
-  if (text.trim() === "/error")
-    throw new Error("这是一次模拟故障。点击「恢复待机」后，可以重新发送消息。");
+  if (text.trim() === "/error") throw new ChatServiceError("MOCK_ERROR");
   if (/难过|伤心|累|sad/i.test(text))
     return {
       text: "累的时候，就让自己慢一点吧。我在这里，陪你安静待一会儿。",
@@ -65,3 +62,9 @@ export const mockChat: ChatService = async (text, signal) => {
     emotion: "neutral",
   };
 };
+
+export const mockChat: ChatService = async (text, signal) => ({
+  ...(await preset(text, signal)),
+  motion: "none",
+  provider: "frontend-mock",
+});

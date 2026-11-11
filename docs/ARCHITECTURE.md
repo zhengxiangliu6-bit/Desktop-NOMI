@@ -1,10 +1,23 @@
 # 技术架构（V0 目标设计）
 
-状态：前端阶段 1 Mock 与阶段 2A 独立后端已实现，尚未联通；全栈持久化、语音与硬件仍为目标设计。接口字段以 [API_CONTRACT](API_CONTRACT.md) 为准，阶段以 [ROADMAP](ROADMAP.md) 为准。
+状态：前端阶段 1 Mock、阶段 2A 后端与阶段 2B 开发 HTTP 集成已实现；全栈持久化、语音与硬件仍为目标设计。接口字段以 [API_CONTRACT](API_CONTRACT.md) 为准，阶段以 [ROADMAP](ROADMAP.md) 为准。
+
+## 阶段 2B 已实现边界
+
+App 配置 → 统一 ChatService → 前端 mockChat 或 HTTP Client → 同源 Vite /api Proxy → FastAPI /api/v0/chat。Provider 选择和 Key 留在后端；前端与后端 Mock 的身份分别显示。所有生产构建由构建期常量强制选择前端 Mock，不允许 URL 或本地存储切换；Pages 工作流不需要后端。
+
+- services/chatService 定义统一结果，HTTP Client 将 reply 转为 text，校验枚举/UUID/长度，固定安全错误文案。API 根只允许同源 /api/...，代理目标只允许服务端配置的 loopback HTTP。后端 Host/Origin/CORS 没有放宽。
+- 控制器持有独立 session_id 和操作身份，服务对象无会话全局状态；首轮无 ID，只有当前成功响应才写入。新会话 abort/清空旧 ID 并隔离迟到结果。
+- pendingMessage 与成功消息分离，失败/取消移除临时项，成功成对追加到最近 60 条；idle 不清历史。SESSION_NOT_FOUND 需要用户主动新建，不静默重建或自动重发。
+- 保留原有 ref 锁、AbortController、卸载清理、调试与错误恢复。网络/未知结果或停止等待明确提示后端未必停止；无幂等和收费模型自动重试。
+- 真实 emotion 只经 Expression Adapter；speaking 仍为 2.4 秒无声展示。motion 仅作为消息描述与调试数据，无动作执行。
+- contracts/chat-v0.json 与 Pydantic/前端类型双向测试；实际 HTTP 集成测试使用专用 FastAPI 进程 + 测试 Mock，无付费模型。前端与 Pages 回归单独验证。
+
+本次没有修改 HTTP 契约、后端安全边界或 Pages 部署流程，没有公网服务。配置与启动/限制见 [INTEGRATION](INTEGRATION.md)。
 
 ## 阶段 2A 已实现边界
 
-实际链路：FastAPI routes → ConversationService → MockProvider / OpenAIProvider → Pydantic StructuredReply。与阶段 1 前端完全独立，Pages 工作流与 frontend 未修改。当前已实现协议见 API_CONTRACT；旧全栈草案归档为 design/API_V0_PLANNED。
+实际链路：FastAPI routes → ConversationService → MockProvider / OpenAIProvider → Pydantic StructuredReply。2A 最初独立交付；阶段 2B 经开发 HTTP Client 接入，Pages 仍仅 Mock。当前已实现协议见 API_CONTRACT；旧全栈草案归档为 design/API_V0_PLANNED。
 
 - `backend/app/core/`：Pydantic Settings、固定错误码、loopback Host/精确 Origin、64 KiB 请求限制、request_id 和脱敏日志。
 - `backend/app/domain/models.py`：ChatRequest / StructuredReply / ChatResponse / Health / ErrorEnvelope，emotion 与 motion 为枚举。
@@ -17,13 +30,13 @@
 
 模型输出必须严格为 reply/emotion/motion；非法结构或枚举返回 UPSTREAM_INVALID_RESPONSE。**2A 不采用后文原草案的 neutral 静默降级**。输出 motion 是 none/nod/tilt/bounce 的描述，不执行硬件或系统操作；后续 Device Adapter 即使加入，也必须独立验证与授权，不能直接消费自由模型指令。
 
-前端的 phase/emotion reducer 与 Mock 不变；后端结构化输出不自动影响 Aora。2B 需要新增 API Client、响应映射和连接策略，不应直接把后端 motion 当 Aora 原生 state。
+前端的 phase/emotion 分离与 Mock 保留；2B 仅通过 Expression Adapter 将后端 emotion 转为 Aora 表情，motion 不当作 Aora state 或硬件命令。
 
 后文“目标”包括尚未实现的全栈设计；当前实现以本节、API_CONTRACT 与 backend/README 为准。Python 3.12 + pyproject + 单一 uv.lock，具体版本由锁文件记录。
 
 ## 阶段 1 已实现边界
 
-当前运行链路：App → useRobotController → 本地 mockChat → reducer → RobotView / ChatPanel；Expression Adapter 为唯一 Aora 状态映射。此处的前端没有 HTTP client 或后端连接，也没有语音或数据库。此次用户明确授权前端聊天外壳与 Mock 情绪展示，不视为提前实现真实 V0.2/V0.3。
+当前运行链路：App → useRobotController → 本地 mockChat → reducer → RobotView / ChatPanel；Expression Adapter 为唯一 Aora 状态映射。这是原始 Mock 路径，2B 另增显式 API 路径；仍没有语音或数据库。此次用户明确授权前端聊天外壳与 Mock 情绪展示，不视为提前实现真实 V0.2/V0.3。
 
 - `frontend/src/app/`：页面装配、柔和响应式样式。
 - `frontend/src/features/robot/`：领域类型、reducer、带 AbortController 的控制器、RobotView、DebugPanel。
@@ -32,7 +45,7 @@
 - `frontend/src/adapters/expression/`：唯一 Aora 映射；`shape="circle"`、cream、cute。`dot` 属角色标识而非 shape，不混用。
 - 前端单元测试与组件测试就近放置；浏览器测试为 `frontend/tests/e2e/`，从 frontend 的 Playwright 配置运行，不创建空根 tests。
 
-本阶段交互状态为 idle/listening/thinking/speaking/error；情绪为 neutral/happy/sad/curious/surprised/angry/concerned。angry 起初为本地预览扩展；阶段 2A 后端也接受该情绪，但前后端仍未集成。
+本阶段交互状态为 idle/listening/thinking/speaking/error；情绪为 neutral/happy/sad/curious/surprised/angry/concerned。angry 起初为本地预览扩展；阶段 2A 后端也接受该情绪，2B 已在开发 API 模式连接。
 
 Mock 流程 idle → thinking → speaking + 情绪 → idle。speaking 仅是 2400ms 无声展示，情绪非 neutral 时显示对应原生表情，neutral 映射 humming；未来真实语音仍按后文工作态优先的目标协议设计，再明确迁移方案。listening 仅调试预览，不录音。预览也使用同一控制器锁，2400ms 到期恢复。
 

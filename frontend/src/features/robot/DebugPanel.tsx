@@ -23,7 +23,10 @@ export function DebugPanel({ state, disabled, onPreview, onError }: Props) {
         <span className="debug-caption">状态与表情预览</span>
       </summary>
       <div className="debug-content">
-        <p>纯本地演示；倾听不录音，回复不播放声音。预览 2.4 秒后恢复待机。</p>
+        <p>
+          调试预览不调用模型；倾听不录音，回复不播放声音。预览 2.4
+          秒后恢复待机。
+        </p>
         <dl>
           <div>
             <dt>交互阶段</dt>
@@ -36,6 +39,22 @@ export function DebugPanel({ state, disabled, onPreview, onError }: Props) {
           <div>
             <dt>Aora state</dt>
             <dd>{mapExpression(state.phase, state.emotion)}</dd>
+          </div>
+          <div>
+            <dt>Provider</dt>
+            <dd>{state.provider ?? "未收到回复"}</dd>
+          </div>
+          <div>
+            <dt>motion（仅描述）</dt>
+            <dd>{state.messages.at(-1)?.motion ?? "none"}</dd>
+          </div>
+          <div>
+            <dt>后端会话</dt>
+            <dd>{state.sessionId ? "已建立" : "未建立"}</dd>
+          </div>
+          <div>
+            <dt>错误码</dt>
+            <dd>{state.errorCode ?? "none"}</dd>
           </div>
         </dl>
         <fieldset disabled={disabled}>

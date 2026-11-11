@@ -6,16 +6,9 @@ export const phases = [
   "error",
 ] as const;
 export type Phase = (typeof phases)[number];
-export const emotions = [
-  "neutral",
-  "happy",
-  "sad",
-  "curious",
-  "surprised",
-  "angry",
-  "concerned",
-] as const;
-export type Emotion = (typeof emotions)[number];
+import type { Emotion, Motion } from "../../api/contract";
+import type { ReplyProvider } from "../../services/chatService";
+export { emotions, type Emotion } from "../../api/contract";
 
 export const phaseLabels: Record<Phase, string> = {
   idle: "自在待机",
@@ -37,6 +30,9 @@ export interface ChatMessage {
   id: number;
   role: "user" | "assistant";
   text: string;
+  pending?: boolean;
+  provider?: ReplyProvider;
+  motion?: Motion;
 }
 export interface RobotState {
   phase: Phase;
@@ -44,6 +40,13 @@ export interface RobotState {
   messages: ChatMessage[];
   error: string | null;
   previewing: boolean;
+  pendingMessage: ChatMessage | null;
+  sessionId: string | null;
+  provider: ReplyProvider | null;
+  errorCode: string | null;
+  requiresNewSession: boolean;
+  notice: string | null;
+  conversation: number;
 }
 export const initialState: RobotState = {
   phase: "idle",
@@ -51,12 +54,25 @@ export const initialState: RobotState = {
   messages: [],
   error: null,
   previewing: false,
+  pendingMessage: null,
+  sessionId: null,
+  provider: null,
+  errorCode: null,
+  requiresNewSession: false,
+  notice: null,
+  conversation: 0,
 };
 export type RobotAction =
   | { type: "send"; message: ChatMessage }
-  | { type: "reply"; message: ChatMessage; emotion: Emotion }
-  | { type: "settle" }
-  | { type: "fail"; message: string }
+  | {
+      type: "reply";
+      message: ChatMessage;
+      emotion: Emotion;
+      sessionId?: string;
+    }
+  | { type: "settle"; notice?: string }
+  | { type: "reset"; notice?: string }
+  | { type: "fail"; message: string; code?: string; notice?: string }
   | { type: "preview"; phase: Exclude<Phase, "error">; emotion: Emotion };
 
 export function robotReducer(
@@ -65,21 +81,45 @@ export function robotReducer(
 ): RobotState {
   switch (action.type) {
     case "send":
-      if (state.phase !== "idle" || state.previewing) return state;
+      if (
+        state.phase !== "idle" ||
+        state.previewing ||
+        state.requiresNewSession
+      )
+        return state;
       return {
         ...state,
         phase: "thinking",
         emotion: "neutral",
         error: null,
-        messages: [...state.messages, action.message].slice(-60),
+        pendingMessage: { ...action.message, pending: true },
+        notice: null,
       };
     case "reply":
-      if (state.phase !== "thinking" || state.previewing) return state;
+      if (
+        state.phase !== "thinking" ||
+        state.previewing ||
+        !state.pendingMessage
+      )
+        return state;
       return {
         ...state,
         phase: "speaking",
         emotion: action.emotion,
-        messages: [...state.messages, action.message].slice(-60),
+        messages: [
+          ...state.messages,
+          { ...state.pendingMessage, pending: false },
+          action.message,
+        ].slice(-60),
+        pendingMessage: null,
+        sessionId: action.sessionId ?? state.sessionId,
+        provider: action.message.provider ?? state.provider,
+      };
+    case "reset":
+      return {
+        ...initialState,
+        conversation: state.conversation + 1,
+        notice: action.notice ?? null,
       };
     case "settle":
       return {
@@ -87,14 +127,22 @@ export function robotReducer(
         phase: "idle",
         emotion: "neutral",
         error: null,
+        errorCode: null,
         previewing: false,
+        pendingMessage: null,
+        notice: action.notice ?? state.notice,
       };
     case "fail":
       return {
         ...state,
         phase: "error",
         emotion: "concerned",
+        notice: action.notice ?? state.notice,
         error: action.message,
+        errorCode: action.code ?? null,
+        pendingMessage: null,
+        requiresNewSession:
+          action.code === "SESSION_NOT_FOUND" || state.requiresNewSession,
         previewing: false,
       };
     case "preview":

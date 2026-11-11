@@ -1,7 +1,10 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
+import { MAX_INPUT_CHARS } from "../../api/contract";
+import type { ChatMode } from "../../services/chatService";
 import type { ChatMessage } from "../robot/model";
 
 interface Props {
+  mode?: ChatMode;
   messages: ChatMessage[];
   disabled: boolean;
   busy: boolean;
@@ -9,6 +12,7 @@ interface Props {
   onCancel: () => void;
 }
 export function ChatPanel({
+  mode = "mock",
   messages,
   disabled,
   busy,
@@ -50,7 +54,15 @@ export function ChatPanel({
           messages.map((message) => (
             <div className={`message ${message.role}`} key={message.id}>
               <span className="message-author">
-                {message.role === "user" ? "你" : "NOMI · Mock"}
+                {message.role === "user"
+                  ? message.pending
+                    ? "你 · 发送中"
+                    : "你"
+                  : message.provider === "openai"
+                    ? "NOMI · OpenAI 兼容"
+                    : message.provider === "mock"
+                      ? "NOMI · 后端 Mock"
+                      : "NOMI · Mock"}
               </span>
               <p>{message.text}</p>
             </div>
@@ -73,8 +85,9 @@ export function ChatPanel({
           id="message"
           placeholder="今天过得怎么样？"
           value={input}
-          onChange={(e) => setInput(e.target.value)}
-          maxLength={4000}
+          onChange={(e) =>
+            setInput([...e.target.value].slice(0, MAX_INPUT_CHARS).join(""))
+          }
           rows={2}
           disabled={disabled}
           onKeyDown={(e) => {
@@ -99,10 +112,14 @@ export function ChatPanel({
         </button>
       </form>
       <div className="composer-note">
-        <span>预设回复 · 无 AI / 无语音 · 刷新即清空</span>
+        <span>
+          {mode === "mock"
+            ? "预设回复 · 无 AI / 无语音 · 刷新即清空"
+            : "无声回复 · 不自动重试 · 重试真实模型可能重复计费"}
+        </span>
         {busy && (
           <button className="text-button" onClick={onCancel}>
-            停止演示
+            {mode === "api" ? "停止等待" : "停止演示"}
           </button>
         )}
       </div>

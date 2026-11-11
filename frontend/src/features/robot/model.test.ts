@@ -47,7 +47,15 @@ describe("robot state transitions", () => {
       { type: "send", message: { id: 61, role: "user", text: "新消息" } },
     );
     expect(next.messages).toHaveLength(60);
-    expect(next.messages[0]?.id).toBe(1);
+    expect(next.messages[0]?.id).toBe(0);
+    expect(next.pendingMessage?.text).toBe("新消息");
+    const completed = robotReducer(next, {
+      type: "reply",
+      message: { id: 62, role: "assistant", text: "回复" },
+      emotion: "happy",
+    });
+    expect(completed.messages).toHaveLength(60);
+    expect(completed.messages[0]?.id).toBe(2);
   });
   it("locks previews even when the preview phase is idle", () => {
     const preview = robotReducer(initialState, {

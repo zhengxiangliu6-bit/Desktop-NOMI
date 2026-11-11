@@ -4,11 +4,11 @@
 
 ## 当前状态
 
-当前为 **阶段 1：虚拟机器人前端原型**。`frontend/` 已可运行：中央 Aora 圆形角色、响应式聊天外壳、纯本地 Mock 回复、阶段/情绪独立管理、可折叠调试与错误恢复。界面明确标识 Mock，尚未接后端、真实 AI 或语音。阶段 2A 已新增独立 Python FastAPI 对话服务，支持可配置 OpenAI 兼容 Provider 与结构化校验；真实账号验证未执行。无持久化或硬件控制，前端集成留到 2B。
+当前为 **阶段 2B：前后端文字对话集成**（阶段 1 外观与 Mock 保留）。`frontend/` 已可运行：中央 Aora 圆形角色、响应式聊天外壳、纯本地 Mock 回复、阶段/情绪独立管理、可折叠调试与错误恢复。界面清晰标识前端 Mock / API / 后端 Mock，尚未执行真实模型验证或实现语音。阶段 2A 提供 FastAPI 服务，阶段 2B 已增加显式开发 API 模式，经同源代理对接结构化回复；默认和所有生产构建仍是前端 Mock。真实账号验证未执行，无持久化或硬件控制。
 
 ## 阶段 2A：独立 AI 后端
 
-前端及 Pages 保持阶段 1 Mock 体验，未连接后端。后端默认 Mock，无需 API Key，Python 3.12 + uv：
+前端默认和 Pages 保持阶段 1 Mock；阶段 2B 可在开发配置中选择 API。后端默认 Mock，无需 API Key，Python 3.12 + uv：
 
 ```bash
 cd backend
@@ -18,6 +18,14 @@ uv run --frozen python -m app.cli
 ```
 
 已实现 `GET /api/v0/health` 与 `POST /api/v0/chat`，返回经过 Pydantic 校验的 reply、emotion、motion。Base URL / Key / Model 均由后端环境变量配置。上下文只存在有界单进程内存，重启清空；motion 不执行任何本机或硬件操作。真实供应商账号/兼容性验证 **未执行**。安装、配置、错误和限制见 [后端说明](backend/README.md) 与 [当前接口契约](docs/API_CONTRACT.md)。
+
+## 阶段 2B：前后端文字集成
+
+默认 `npm run dev` 仍为纯 Mock。需要 HTTP 集成时，复制 `frontend/.env.example` 为被忽略的 `frontend/.env.local`，设置 `VITE_CHAT_MODE=api` 并重启 Vite；先在另一终端启动上述后端。默认同源 `/api/v0` 由 Vite 转给 loopback 8000，不放开 CORS，不需要前端密钥。
+
+首轮不带 session_id，成功后续聊复用；「新会话」显式重建，错误不污染成功记录。API 回答标识真实返回的 Provider，后端 Mock 绝不冒充真实模型。取消不能保证后端停止，手动重试真实模型可能重复计费。所有生产构建强制 Mock，无公网后端。
+
+完整的两终端启动、配置、Mock/API 验收、测试和阶段 2C 建议见 [集成说明](docs/INTEGRATION.md)。新增 `npm run test:integration` 使用实际 FastAPI + Mock Provider，无需账号。
 
 ## 在线预览（GitHub Pages）
 
@@ -89,11 +97,11 @@ Linux 云端已安装 Chromium 时可执行 `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH
 
 V0.0 规范 → V0.1 工程骨架与表情 → V0.2 文字对话 → V0.3 情绪联动 → V0.4 语音 → V0.5 Windows 验收。长期记忆、主动交互和真实硬件属于后续版本。
 
-阶段 1 按新任务授权先交付前端 Mock 交互，未完成原 V0.1 的 FastAPI/health 及 Windows 验收，亦未实现 V0.2/V0.3 的真实服务。前端测试位于 `frontend/src/**/*.test.*` 与 `frontend/tests/e2e/`；阶段 2A 的后端及 pytest 位于 `backend/`，根 `tests/` 尚未创建；全栈 SQLite/幂等与真实前端集成仍未交付。
+阶段 1 按新任务授权先交付前端 Mock 交互，未完成原 V0.1 的 FastAPI/health 及 Windows 验收，亦未实现 V0.2/V0.3 的真实服务。前端测试位于 `frontend/src/**/*.test.*` 与 `frontend/tests/e2e/`；阶段 2A 的后端及 pytest 位于 `backend/`，根 `tests/` 尚未创建；SQLite/幂等仍未交付，2B HTTP 集成已通过 Mock Provider 验证，真实模型验收留到 2C。
 
 ## 配置与安全
 
-后端已通过 Pydantic Settings 加载根目录 `.env`，进程环境优先；根 `.env.example` 只有空凭据与非敏感默认值，Mock 无需配置。当前前端不读取 API 配置；未来可在 `frontend/.env.local` 单独配置公开的 `VITE_API_BASE_URL`。不要把整个根目录 `.env` 暴露给 Vite。
+后端已通过 Pydantic Settings 加载根目录 `.env`，进程环境优先；根 `.env.example` 只有空凭据与非敏感默认值，Mock 无需配置。前端开发配置只在 `frontend/.env.local`，包括公开的模式、同源 API 路径和超时；模型参数及 Key 始终在后端。不要把整个根目录 `.env` 暴露给 Vite。
 
 阶段 2A 后端仅本机使用，FastAPI 绑定 `127.0.0.1`，精确限制开发来源；当前 Pages 在线预览只有静态前端，不包含该后端。真实会话和音频不入 Git。云端检查不能替代 Windows 麦克风、扬声器与浏览器权限的人工验收。
 
@@ -105,4 +113,4 @@ Powered by [Aora Bot](https://github.com/sam70361/aora-bot)。其 npm 包采用 
 
 - Mock 依关键词返回固定文本，不具备模型推理、真实记忆或语音能力；演示完成时间固定，不代表语速。
 - 浏览器已验证 Linux Chromium 桌面和 375px 手机视口；Windows、Safari、Firefox 及实体手机仍需本机验收。
-- 生产构建成功，但主 JS 约 611 kB（gzip 约 213 kB），触发 Vite 的 500 kB 提示；Aora 聚合入口和主题动态块为后续性能优化项，当前不为消除提示改动上游源码。
+- 生产构建成功，但主 JS 约 618 kB（gzip 约 216 kB），触发 Vite 的 500 kB 提示；Aora 聚合入口和主题动态块为后续性能优化项，当前不为消除提示改动上游源码。
