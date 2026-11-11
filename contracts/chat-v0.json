@@ -1,0 +1,95 @@
+{
+  "request": {
+    "additionalProperties": false,
+    "properties": {
+      "text": {
+        "maxLength": 4000,
+        "minLength": 1,
+        "title": "Text",
+        "type": "string"
+      },
+      "session_id": {
+        "anyOf": [
+          {
+            "format": "uuid",
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Session Id"
+      }
+    },
+    "required": [
+      "text"
+    ],
+    "title": "ChatRequest",
+    "type": "object"
+  },
+  "response": {
+    "$defs": {
+      "Emotion": {
+        "enum": [
+          "neutral",
+          "happy",
+          "sad",
+          "curious",
+          "surprised",
+          "angry",
+          "concerned"
+        ],
+        "title": "Emotion",
+        "type": "string"
+      },
+      "Motion": {
+        "enum": [
+          "none",
+          "nod",
+          "tilt",
+          "bounce"
+        ],
+        "title": "Motion",
+        "type": "string"
+      }
+    },
+    "additionalProperties": false,
+    "properties": {
+      "reply": {
+        "maxLength": 8000,
+        "minLength": 1,
+        "title": "Reply",
+        "type": "string"
+      },
+      "emotion": {
+        "$ref": "#/$defs/Emotion"
+      },
+      "motion": {
+        "$ref": "#/$defs/Motion"
+      },
+      "session_id": {
+        "format": "uuid",
+        "title": "Session Id",
+        "type": "string"
+      },
+      "provider": {
+        "enum": [
+          "mock",
+          "openai"
+        ],
+        "title": "Provider",
+        "type": "string"
+      }
+    },
+    "required": [
+      "reply",
+      "emotion",
+      "motion",
+      "session_id",
+      "provider"
+    ],
+    "title": "ChatResponse",
+    "type": "object"
+  }
+}

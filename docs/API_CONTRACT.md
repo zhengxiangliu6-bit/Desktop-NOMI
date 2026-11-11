@@ -1,6 +1,6 @@
-# 后端 API 契约：阶段 2A
+# 后端 API 契约：阶段 2A / 2B 消费者
 
-状态：已实现并以 pytest / 本地 HTTP 验证，真实模型账号验证未执行。阶段 1 前端及 Pages 仍调用自己的本地 Mock，**未接入本服务**。基础路径 `/api/v0`，UTF-8 JSON，字段 snake_case。
+状态：已实现并以 pytest / 本地 HTTP 验证，真实模型账号验证未执行。阶段 2B 在显式 api 开发模式中经同源代理接入；默认前端与 Pages 仍为纯 Mock。基础路径 `/api/v0`，UTF-8 JSON，字段 snake_case。
 
 旧的全栈设计保留为 [历史规划](design/API_V0_PLANNED.md)，其中 `/sessions`、turn_id、SQLite、语音等均未实现。2A 新增独立 `/chat`，不将旧草案中的 Emotion 对象 / TurnResult 冒充当前响应；2B 应以本文与当前 OpenAPI 为入口。
 
@@ -105,4 +105,12 @@ retryable 仅表示可由用户选择重试，不等于应该自动重试；认�
 
 默认只绑定 loopback，校验 Host 为 localhost/127.0.0.1/::1；来源为精确配置列表，禁止通配、credentials 默认关闭。不提供认证，不能当作可公开部署服务；Pages 未获后端接入权限，本阶段不放开其 Origin。
 
-实现入口为 `backend/app/domain/models.py` 和 `api/routes.py`，应用运行时 `/openapi.json` 为可执行 schema。未来 2B 需要显式设计前端 API Client、部署连接和 error/enum 映射；不得因已有 motion 字段就驱动设备。SQLite、turn_id/幂等、语音与长期记忆仍为后续范围。
+实现入口为 `backend/app/domain/models.py` 和 `api/routes.py`，应用运行时 `/openapi.json` 为可执行 schema。阶段 2B 已实现开发用 HTTP Client、会话/错误恢复和 emotion 映射，未部署公网后端；不得因已有 motion 字段就驱动设备。SQLite、turn_id/幂等、语音与长期记忆仍为后续范围。
+
+## 阶段 2B 客户端补充（HTTP 契约未变）
+
+前端只构造 text 和可选 session_id；成功响应需验证 reply、emotion、motion、UUID、provider 和 200 状态，续聊响应不能偷偷替换 ID。成功成对保存记录，失效会话需用户主动新建。模式与 Provider 分开显示；motion 只作描述，不直接映射到执行器。
+
+错误 body 的 message 仅用于服务端契约，前端不直接显示它，而按经过检查的 code/status 使用固定安全文案。网络错误、客户端等待超时和非 JSON/非法响应为客户端本地错误，不是新增后端状态码；未知提交结果和取消都不保证服务端停止，也不自动重试。
+
+Pydantic schema 快照为 contracts/chat-v0.json，由 backend/scripts/export_contract.py 生成，后端与前端测试分别检查与实际模型和消费类型一致。字段与路由没有变更，不使用归档中的 sessions/turn_id。具体开发边界见 [INTEGRATION](INTEGRATION.md)。

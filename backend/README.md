@@ -1,6 +1,6 @@
 # Desktop-NOMI 后端：阶段 2A
 
-独立 FastAPI Chat Completions 服务。前端/Pages 保持原本的 Mock，不会调用本服务。
+独立 FastAPI Chat Completions 服务。前端默认和 Pages 保持原本的 Mock；阶段 2B 在显式开发 API 模式中经同源 Vite Proxy 调用本服务。
 
 ## 安装、测试与启动
 
@@ -59,5 +59,5 @@ Provider 使用非流式 `/chat/completions`、messages、model、max_tokens；�
 - pytest 全部使用 Mock Provider / httpx.MockTransport / 虚构凭据；模拟适配器路径通过不代表真实账号已通过。
 - 错误区分：UPSTREAM_ERROR（请求/网络）、UPSTREAM_TIMEOUT（超时）、UPSTREAM_INVALID_RESPONSE（格式/枚举）；失败不污染上下文，可手动重新请求。
 - 当前仅内存上下文，重启清空；不支持多 worker、SQLite、持久化、幂等去重或用户认证。默认只供本机开发，不直接开放公网。
-- motion 只是枚举；没有 shell、文件写入、工具执行或硬件控制模块。语音、前端集成与真实模型烟测未执行。
+- motion 只是枚举；没有 shell、文件写入、工具执行或硬件控制模块。语音与真实模型烟测未执行；2B HTTP 集成由实际 FastAPI + 测试 Mock 验证，见 [集成说明](../docs/INTEGRATION.md)。
 - pytest 当前有一项上游 Starlette TestClient 对 httpx 的弃用提示；未屏蔽，不影响本次已执行用例，但未来升级测试客户端需重新验证。

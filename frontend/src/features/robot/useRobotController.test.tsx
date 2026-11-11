@@ -65,7 +65,12 @@ describe("robot controller lifecycle", () => {
             resolveOld = resolve;
           }),
       )
-      .mockResolvedValue({ text: "新回复", emotion: "happy" });
+      .mockResolvedValue({
+        text: "新回复",
+        emotion: "happy",
+        motion: "none",
+        provider: "frontend-mock",
+      });
     const { result } = renderHook(() => useRobotController(service), {
       wrapper,
     });
@@ -78,10 +83,14 @@ describe("robot controller lifecycle", () => {
       await Promise.resolve();
     });
     await act(async () => {
-      resolveOld({ text: "过期回复", emotion: "sad" });
+      resolveOld({
+        text: "过期回复",
+        emotion: "sad",
+        motion: "none",
+        provider: "frontend-mock",
+      });
     });
     expect(result.current.state.messages.map((m) => m.text)).toEqual([
-      "旧消息",
       "新消息",
       "新回复",
     ]);
