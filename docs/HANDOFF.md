@@ -1,72 +1,64 @@
 # 任务交接
 
-更新：2026-11-11（Asia/Shanghai）。当前交付：阶段 1「虚拟机器人前端原型」。后端、真实 AI、STT/TTS、持久化与硬件均未实现。
+更新：2026-11-11（Asia/Shanghai）。本次仅为现有阶段 1 添加 GitHub Pages 静态在线预览配置，不继续 AI / 语音，不重新设计界面。
 
-## 恢复入口与分支
+## 基线、分支与当前状态
 
-先读 AGENTS、README、ARCHITECTURE、API_CONTRACT、ROADMAP 和本记录。开始时工作区干净，原架构 PR #1 已合并到 main；本任务执行 `git fetch origin main`，从 `9b84521` 创建独立分支 `feat/stage1-virtual-robot`，未修改 main。
+- 先读 AGENTS、README、ARCHITECTURE、API_CONTRACT、ROADMAP 及本交接；网页启用与验收步骤见 [PREVIEW](PREVIEW.md)。
+- 已实际 fetch 远端：main=`40c334b`，提交说明为 Merge pull request #2 from feat/stage1-virtual-robot。`git merge-base --is-ancestor 5ad49f7 origin/main` 返回 0，确认阶段 1 已合并，不依赖旧交接的推断。
+- 从最新 origin/main 创建独立分支 `deploy/github-pages-preview`。开始时工作区干净，未直接修改 main。
+- 预期公网地址：**https://zhengxiangliu6-bit.github.io/Desktop-NOMI/**。当前 **尚未验证已上线**；GitHub API 与该 Pages 域名均被云代理拒绝连接，无法读取/启用 Pages、读取 Actions 结果或实际公网访问。代理 CONNECT 403 不等于站点返回 404，也不能推断仓库管理员权限缺失。
+- 本次不合并 PR、不发布云环境；部署需本 PR 合并后按 PREVIEW 在 GitHub 网页启用 Source=GitHub Actions。
 
-按本次明确授权先实现前端 Mock 交互；不表示全栈 V0.1（health / 后端 / Windows）或真实 V0.2/V0.3 已完成。后续只做用户指定阶段，不自动接入模型、录音或后端。
+## 修改文件与决策
 
-## 修改文件与模块
+- `.github/workflows/pages.yml`：main push、相关 PR 与手动运行；锁文件安装、typecheck、test、build、既有浏览器测试与静态 Pages 测试。只有 main 非 PR 运行上传 frontend/dist 并部署，PR 只有只读检查权限；deploy 使用 pages:write / id-token:write。无供应商 secrets，不上传 .env 或后端。
+- `frontend/vite.config.ts`：固定 `base: "/Desktop-NOMI/"`，大小写与仓库匹配，开发/生产保持一致。
+- `frontend/playwright.config.ts`、`tests/e2e/robot.spec.ts`：既有开发回归入口同步子路径，业务断言保留。
+- `frontend/playwright.pages.config.ts`、`scripts/serve-pages.mjs`、`tests/pages/preview.spec.ts`：真实 Chromium 检查生产 dist 子路径、全部构建资源、刷新、首页导航和 Mock 回复。Node 静态服务器仅测试 fixture，不是应用后端，不上传到 Pages；没有 SPA fallback。
+- `frontend/package.json`：增加 `test:pages`；`tsconfig.json` 纳入新 Playwright 配置。不新增依赖、不更改锁文件。
+- README、ARCHITECTURE、PREVIEW、本 HANDOFF：同步公网地址的预期/实测区别、网页操作、路由与开发地址。`frontend/src/` 完全不变，现有 UI、Mock 行为与 Aora 署名保留。
 
-- `frontend/package.json`、`package-lock.json`、`.nvmrc`、`.npmrc`、`tsconfig.json`、`vite.config.ts`、`playwright.config.ts`、`index.html`：精确版本、严格 TS、Vite / Vitest / Playwright 工程入口。
-- `frontend/src/main.tsx`、`app/App.tsx`、`app/styles.css`：React StrictMode、中央圆形角色、响应式柔和界面、Mock 标识及 Aora 署名。
-- `features/robot/model.ts`、`useRobotController.ts`：阶段/情绪分离、reducer、同步 ref 锁、操作级 AbortController、取消与卸载清理。
-- `features/robot/RobotView.tsx`、`DebugPanel.tsx`、`adapters/expression/mapExpression.ts`：Aora 真实 API 映射、错误降级、可折叠调试和 reduced-motion / 隐藏暂停。
-- `features/conversation/ChatPanel.tsx`、`services/mockChat.ts`：输入与预设回复、内存最近 60 条、4000 字输入限制、中文输入法回车保护。
-- `src/test/setup.ts`、5 个 `*.test.ts(x)`、`frontend/tests/e2e/robot.spec.ts`：单元/组件/生命周期及实际浏览器验收。
-- README、ARCHITECTURE、API_CONTRACT、ROADMAP、AORA_RESEARCH、本交接：同步实现边界、运行命令、Mock 映射及验收；未改变未来 HTTP Emotion 枚举。
+## 执行命令与真实结果
 
-上面未带 frontend/src 前缀的 features/adapters/services 路径均相对于 frontend/src。没有创建 backend 或空 tests 目录。
+- `git fetch origin main feat/stage1-virtual-robot`：成功。首次使用 origin/feat/stage1-virtual-robot 做祖先检查因该远端跟踪 ref 未创建而失败；随后用已知阶段 1 最终提交 SHA 5ad49f7 对最新 origin/main 检查，返回 0，确认合并。
+- `git switch -c deploy/github-pages-preview origin/main`：成功。
+- 读取官方 actions/starter-workflows 的 pages/static.yml：成功；采用 checkout@v4、configure-pages@v5、upload-pages-artifact@v3、deploy-pages@v5 的官方流程，加 setup-node@v4。
+- `gh api repos/zhengxiangliu6-bit/Desktop-NOMI/pages`：Forbidden，未得到 Pages 配置。没有尝试提取或输出认证值。
+- `curl -I --max-time 20 https://zhengxiangliu6-bit.github.io/Desktop-NOMI/`：代理 CONNECT 403，未建立到站点的连接。**不是公网页面验证通过**。
+- `npm --cache /tmp/nomi-npm-cache ci --prefix frontend`：成功安装 104 个包；项目依赖未变化。实际环境 Node 24.22.1 / npm 11.9.0；Actions 将按 .nvmrc 使用 22.22.2，尚未实际运行 Actions。
+- `npm run typecheck --prefix frontend`：通过。
+- `npm test --prefix frontend`：5 个文件、21 项测试全部通过。
+- `npm run build --prefix frontend`：成功，dist/index.html 的 JS/CSS 使用 /Desktop-NOMI/assets/。主 JS 约 611 kB 的已知提示保留，未屏蔽。
+- `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium npm run test:pages`（frontend 中）：1 项通过，覆盖全部生成资源 200、JS/CSS 前缀、Mock 回复、刷新后清空内存、品牌导航和未定义路由/资源 404。本地通过不等于 GitHub Pages 已上线。
+- 初次既有 e2e 复用之前任务遗留的 Vite 进程，因 npm ci 后其 optimize-deps 缓存过期，React 资源返回 504。用浏览器日志定位后，仅停止本助手启动的旧 dev/preview 进程。
+- `CI=1 PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium npm run test:e2e`：干净启动后 2 项全部通过，未改变业务断言。
+- 原尝试 go run actionlint 未执行：系统 /usr/bin/go 为其他程序，不支持 Go 的 run 命令。随后下载 actionlint 1.7.7 官方发行包和校验清单，`sha256sum --check --ignore-missing` 通过，才解包执行；未绕过验证。
+- `/tmp/nomi-actionlint/actionlint .github/workflows/pages.yml`：通过。
+- 文档相对链接、YAML 结构、必须执行的构建步骤、PR/deploy 权限分离与无 secrets 注入检查：通过。`git diff --check`：通过。
+- Git 提交、推送和 PR 结果见下面的最终交付记录。
 
-## 关键行为
+## 路由与界面验证范围
 
-- `circle` / `cream` / `cute`；Aora 0.2.0 不接受 `shape="dot"`，dot 是角色标识。
-- `idle → thinking (900ms) → speaking + 情绪 (2400ms) → idle`。无音频，neutral speaking 映射 humming，其他情绪 speaking 保留对应原生表情。工作态 thinking/listening 与 error 优先。
-- listening 仅调试演示；angry 为本地情绪扩展，不扩散到尚未实现的 HTTP 契约。
-- 调试预览 2400ms 后恢复，预览期间同样禁止重复发送。`/error` 或调试「模拟错误」产生明确故障，恢复待机后再发送。
-- 取消/卸载 abort 本地等待，迟到结果通过操作身份与 mounted 标志丢弃；无网络请求、API Key、localStorage 或数据库。
-- npm 精确锁定 React/DOM 19.3.1、Aora 0.2.0、Vite 8.3.8、TypeScript 7.0.2、Vitest 5.1.0 等。依 jsdom 31 要求，Node 基线调整至 22.22.2+（22 系列）/24.15.0+（24 系列）；实际云端为 Node 24.22.1 / npm 11.9.0，未单独运行 Node 22。
+唯一入口 `/Desktop-NOMI/`，当前无业务路由。查询参数、刷新和相对首页链接在静态生产测试中正常；任意深层路径不是受支持页面，未添加 404 跳转补丁。开发地址改为本机 5173/Desktop-NOMI/，本机 preview 为 4173/Desktop-NOMI/，只供开发测试，不作为公网交付地址。
 
-## 本次执行命令与结果
+阶段 1 仍采用 React 19 + TS + Vite、Aora 0.2.0，interaction 与 emotion 分离；Mock 900ms 回复、2400ms 无声 speaking 后恢复 idle，错误可恢复、取消/卸载清理。无模型、网络聊天、录音、语音、数据库或设备控制。Windows / Safari / Firefox / 实体音频尚未验证。
 
-均为实际运行；未执行的 Windows 能力不计为通过。
+## 下一步（用户仅用 GitHub 网页即可）
 
-- `git status --short --branch`、阅读规范/架构/交接及 `rg --files`：完成；无已有应用代码或依赖。
-- `git fetch origin main`、`git switch -c feat/stage1-virtual-robot origin/main`：成功。
-- `npm --cache /tmp/nomi-npm-cache view @aora-bot/react version peerDependencies --json`：latest 仍为 0.2.0，React >=19。
-- 根目录 `npm --cache /tmp/nomi-npm-cache install --prefix frontend --save-exact react@19 react-dom@19 @aora-bot/react@0.2.0`，及对应 `--save-dev --save-exact` TypeScript、Vite、Vitest、Testing Library、Playwright 等：成功。版本见 package-lock；缓存用 /tmp，未修改系统权限。
-- `cd frontend` 后 `npm --cache /tmp/nomi-npm-cache ci`：成功，最终锁文件重装 104 个包。标准本机命令为 `npm ci`，本云端默认 home 缓存不可写时需加上述 cache 参数。
-- `npm run typecheck`：最终通过。最初发现 shape dot 不合法，已修正为 circle。
-- `npm test`：**5 个测试文件、21 项测试全部通过**。覆盖状态迁移/映射、预设回复、错误恢复、同 tick 重复提交、取消后迟到回复、卸载清理、预览锁、HTML 安全显示及中文输入法。
-- `npm run build`：成功生成 dist；Vite 提示主包约 610.72 kB（gzip 212.99 kB）超过 500 kB，构建并未失败，提示未屏蔽。
-- `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium npm run test:e2e`：**2 项全部通过**。桌面实际 SVG 挂载与 idle 帧变化、Mock 往返、取消、错误恢复、调试；375px 移动视口不横向溢出、键盘发送、reduced-motion 连续 12 帧静止。桌面流程无 pageerror，无外部请求。
-- 首次 e2e 桌面项因文本定位同时匹配隐藏调试按钮失败；改为唯一 status role 定位后完整重跑通过。移动项首次亦通过。未降低业务断言。
-- `npm run dev`：启动成功，当前实例监听本机 5173。`npm run preview`：生产静态预览启动成功，监听 4173。进程不会随新任务保证恢复，需重新启动。
-- 额外 Node + Playwright 生产预览烟测：真实 SVG、Mock happy 回复、无页面异常通过；保存干净桌面/手机截图。生成输出 `frontend/test-results/preview-desktop.png`、`preview-mobile.png`，以及 e2e 的 desktop/mobile.png，均被 Git 忽略。
-- 临时 Prettier 格式化前端源码/配置；未增加格式化器项目依赖。
-- `gh pr list --repo zhengxiangliu6-bit/Desktop-NOMI --head feat/stage1-virtual-robot --json number,url`：GitHub GraphQL Forbidden，API 访问仍受阻，Git 读取正常。最终推送与创建 PR 结果见下方追加记录。
+1. 将本次部署分支通过 PR 合并 main（若 API 创建受阻，compare 页面可手动创建）。
+2. Settings → Actions 确认可用；Settings → Pages → Source 选择 GitHub Actions。
+3. Actions → Mock preview on GitHub Pages → Run workflow，选择 main；按要求批准 github-pages environment。
+4. build/deploy 成功后从输出地址真实访问，检查 Mock、资源、刷新和首页导航，并记录 Actions run URL、部署 SHA 与浏览器结果。
+5. 若本云端需要继续自动创建 PR 或验证，环境网络还需允许 api.github.com 和 zhengxiangliu6-bit.github.io；GitHub API 认证能力需另行验证，Git 读写成功不代表 API 可用。不要在聊天发送 Token。
 
-## 已知问题与验收限制
+本阶段仅在线预览；后续功能仍需新授权。Pages 无法启用时须按 GitHub 网页具体报错处理，不要擅自改成有密钥的部署或真实 AI 后端。
 
-- 本地规则 Mock，不具备真实理解；语音阶段仅状态展示，无录音或声音。Windows、Safari、Firefox 与真实手机未实测；麦克风/扬声器不在本任务范围。
-- Aora 聚合入口产生较大的主包及主题动态块，未来按实际性能需求优化，当前未改动或复制第三方源码。
-- Aora License 1.1 需按最终拥有者、组织人数及发行方式确认免费/商业资格；界面和 README 保留署名，项目自身 LICENSE 尚待拥有者选择。
-- HTTP 契约仍为未来设计，不可把前端本地类型当作已实现服务端 schema。
-- 未更改云环境草稿、未部署或发布环境。PR 受 API 权限/网络影响时不能声称创建成功。
+## 最终交付记录
 
-## 启动、手动验收与下一步
-
-本机：`cd frontend` → `npm ci` → `npm run dev`，浏览器访问本机 5173。无环境变量或 Key 前置要求；生产预览用 `npm run build` 后 `npm run preview`。完整手动验收步骤见 README。
-
-建议下一任务先在 Windows 做阶段 1 人工验收，再按用户授权决定是否开始后端骨架；不要自动跳到真实 AI 或语音。创建 PR 需要允许 api.github.com 并具备相应 API 权限，勿在聊天发送 Token。
-
-## 提交与 PR 最终结果
-
-- 自动检查文档相对链接（8 个）、JSON 示例/清单、代码围栏与 `git diff --cached --check`：通过。
-- 实现提交：`03b7b09`，`feat: add Aora virtual robot frontend with local mock chat`。
-- `git push -u origin feat/stage1-virtual-robot`：成功，分支已推送；main 未修改。
-- `gh pr create --repo zhengxiangliu6-bit/Desktop-NOMI --base main --head feat/stage1-virtual-robot --title "feat: 阶段 1 虚拟机器人前端与 Mock 交互" --body-file /tmp/nomi-stage1-pr.md`：失败，`Post https://api.github.com/graphql: Forbidden`，**PR 未创建**。
-- 可手动创建：https://github.com/zhengxiangliu6-bit/Desktop-NOMI/compare/main...feat/stage1-virtual-robot?expand=1 。允许 api.github.com 并确认 API 权限后可重试 gh；若临时说明文件不存在，依据本交接重建 PR 说明。
-- 本最终记录作为后续文档提交推送同一分支。最新提交见 `git log -1`；未合并或发布。
+- `4f54f4c`：部署配置与说明提交成功。
+- `git push -u origin deploy/github-pages-preview`：成功，GitHub 接受包括 workflow 在内的分支文件，未遇到 workflow 推送权限拒绝。文件已在远端分支，但这不代表工作流已在 main 激活或运行。
+- `gh pr create --repo zhengxiangliu6-bit/Desktop-NOMI --base main --head deploy/github-pages-preview --title "ci: 为阶段 1 添加 GitHub Pages 在线预览" --body-file /tmp/nomi-pages-pr.md`：失败，`Post https://api.github.com/graphql: Forbidden`；**PR 未创建**。
+- 可在网页创建 PR：https://github.com/zhengxiangliu6-bit/Desktop-NOMI/compare/main...deploy/github-pages-preview?expand=1 。分支所有变更已具备审查条件。
+- Pages 启用、Actions 执行和公网访问均未获得证据，仍标记为未验证。网页操作与验收清单见 PREVIEW。
+- 本补充记录再提交并推送同一分支；最新提交以 `git log -1` 为准。不合并 PR，不发布云环境。

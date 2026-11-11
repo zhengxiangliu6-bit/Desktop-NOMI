@@ -6,6 +6,14 @@
 
 当前为 **阶段 1：虚拟机器人前端原型**。`frontend/` 已可运行：中央 Aora 圆形角色、响应式聊天外壳、纯本地 Mock 回复、阶段/情绪独立管理、可折叠调试与错误恢复。界面明确标识 Mock；没有后端、真实 AI、录音、语音播放、持久化或硬件控制。HTTP 接口文档仍为未来设计。
 
+## 在线预览（GitHub Pages）
+
+预期地址：**https://zhengxiangliu6-bit.github.io/Desktop-NOMI/**。
+
+已添加 Actions 构建部署配置，但本次云端对 GitHub API 与 Pages 域名均被代理拒绝连接，**尚未验证 Pages 已启用、Actions 已部署或公网页面可用**。部署分支合并并由拥有者启用 Pages 后，即可只通过浏览器查看，不必在 Windows 安装 Node.js。
+
+网页启用步骤、工作流与公网验收见 [在线预览说明](docs/PREVIEW.md)。当前仅发布 Mock 静态前端，无模型 Key、后端或语音。现有界面保持不变。
+
 ## 启动与预览
 
 需要 Node.js **22.22.2+（22 系列）或 24.15.0+（24 系列）**，以及 npm；`frontend/.nvmrc` 固定 22.22.2。本次云端实际验证 Node 24.22.1 / npm 11.9.0。无需 `.env` 或 API Key。
@@ -16,7 +24,7 @@ npm ci
 npm run dev
 ```
 
-在运行命令的电脑上，用浏览器访问 `http://127.0.0.1:5173`。这不是已部署的公网预览；云端 loopback 地址无法直接从你的 Windows 浏览器访问。可在 Windows 拉取分支后执行相同命令，或查看本次生成的桌面/手机截图。开发服务器默认仅监听本机，不建议直接开放到局域网。
+在运行命令的电脑上，用浏览器访问 `http://127.0.0.1:5173/Desktop-NOMI/`。这不是已部署的公网预览；云端 loopback 地址无法直接从你的 Windows 浏览器访问。可在 Windows 拉取分支后执行相同命令，或查看本次生成的桌面/手机截图。开发服务器默认仅监听本机，不建议直接开放到局域网。
 
 ```bash
 # 均在 frontend/ 中执行
@@ -26,7 +34,7 @@ npm run build
 npm run preview
 ```
 
-生产构建输出 `frontend/dist/`，preview 在本机 `http://127.0.0.1:4173` 提供静态预览。以上命令同时适用于 PowerShell，无需 Bash 环境变量写法。
+生产构建输出 `frontend/dist/`，preview 在本机 `http://127.0.0.1:4173/Desktop-NOMI/` 提供静态预览。以上命令同时适用于 PowerShell，无需 Bash 环境变量写法。
 
 浏览器测试（可选额外安装 Chromium，首次需要网络）：
 
@@ -74,7 +82,7 @@ V0.0 规范 → V0.1 工程骨架与表情 → V0.2 文字对话 → V0.3 情绪
 
 根目录 `.env.example` 仅是变量契约，复制为 `.env` 后由未来后端显式加载；当前没有加载器。当前前端不读取 API 配置；未来可在 `frontend/.env.local` 单独配置公开的 `VITE_API_BASE_URL`。不要把整个根目录 `.env` 暴露给 Vite。
 
-默认仅本机使用，FastAPI 绑定 `127.0.0.1`，精确限制开发来源，不对局域网开放。真实会话和音频不入 Git。云端检查不能替代 Windows 麦克风、扬声器与浏览器权限的人工验收。
+未来后端默认仅本机使用，FastAPI 绑定 `127.0.0.1`，精确限制开发来源；当前 Pages 在线预览只有静态前端，不包含该后端。真实会话和音频不入 Git。云端检查不能替代 Windows 麦克风、扬声器与浏览器权限的人工验收。
 
 ## 第三方与许可
 

@@ -23,9 +23,13 @@ Aora `autoPause=true` 负责离屏、隐藏与 prefers-reduced-motion 动画暂�
 
 前端使用严格 TypeScript、npm 精确版本与 package-lock；Node 基线 22.22.2+ / 24.15.0+，这是 jsdom 31 等锁定工具要求。本次实际验证 Node 24.22.1，Node 22 尚未单独实测。没有 Python 依赖清单。
 
+## 阶段 1 静态在线预览
+
+GitHub Pages 仅托管 `frontend/dist/` 的现有 Mock 原型。Vite base 为 `/Desktop-NOMI/`；单页入口无业务路由，不增加 SPA fallback 或后端。Actions 在 PR 中执行检查，仅 main 非 PR 运行具备部署路径。完整设置、权限及真实公网验证限制见 [PREVIEW](PREVIEW.md)。本地 Node 静态测试服务器只是浏览器测试 fixture，不构成业务服务。
+
 ## 边界与依赖方向
 
-Windows 浏览器运行 React，FastAPI 在同一电脑运行。V0 不选 Electron / Tauri，不承诺置顶、托盘、透明窗口或安装包；在浏览器验证交互后另作 ADR。开发 Vite 5173、后端 8000；正式本机分发如何托管静态资源留待后续决策，不开放公网。
+Windows 浏览器运行 React，FastAPI 在同一电脑运行。V0 不选 Electron / Tauri，不承诺置顶、托盘、透明窗口或安装包；在浏览器验证交互后另作 ADR。开发 Vite 5173、后端 8000；正式本机分发方式留待后续决策，后端不开放公网；当前 Mock 前端可通过 GitHub Pages 独立公开预览。
 
 ```mermaid
 flowchart LR

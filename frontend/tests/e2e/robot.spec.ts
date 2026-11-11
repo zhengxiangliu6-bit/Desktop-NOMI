@@ -14,7 +14,7 @@ test("desktop: real Aora SVG, mock chat, stop, error recovery and preview", asyn
       externalRequests.push(request.url());
   });
   await page.setViewportSize({ width: 1280, height: 1000 });
-  await page.goto("/");
+  await page.goto("./");
   await expect(page.getByText("MOCK 模式")).toBeVisible();
   await expect(page.locator(".aora-mark svg").first()).toBeVisible();
   await expect(page.locator(".aora-mark")).toHaveAttribute(
@@ -79,7 +79,7 @@ test("mobile: responsive layout, reduced motion and keyboard access", async ({
 }) => {
   await page.setViewportSize({ width: 375, height: 812 });
   await page.emulateMedia({ reducedMotion: "reduce" });
-  await page.goto("/");
+  await page.goto("./");
   await expect(page.locator(".aora-mark svg").first()).toBeVisible();
   await expect(page.getByRole("textbox")).toBeVisible();
   await page.getByRole("textbox").fill("哇，惊喜");
