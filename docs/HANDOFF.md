@@ -53,3 +53,12 @@
 5. 若本云端需要继续自动创建 PR 或验证，环境网络还需允许 api.github.com 和 zhengxiangliu6-bit.github.io；GitHub API 认证能力需另行验证，Git 读写成功不代表 API 可用。不要在聊天发送 Token。
 
 本阶段仅在线预览；后续功能仍需新授权。Pages 无法启用时须按 GitHub 网页具体报错处理，不要擅自改成有密钥的部署或真实 AI 后端。
+
+## 最终交付记录
+
+- `4f54f4c`：部署配置与说明提交成功。
+- `git push -u origin deploy/github-pages-preview`：成功，GitHub 接受包括 workflow 在内的分支文件，未遇到 workflow 推送权限拒绝。文件已在远端分支，但这不代表工作流已在 main 激活或运行。
+- `gh pr create --repo zhengxiangliu6-bit/Desktop-NOMI --base main --head deploy/github-pages-preview --title "ci: 为阶段 1 添加 GitHub Pages 在线预览" --body-file /tmp/nomi-pages-pr.md`：失败，`Post https://api.github.com/graphql: Forbidden`；**PR 未创建**。
+- 可在网页创建 PR：https://github.com/zhengxiangliu6-bit/Desktop-NOMI/compare/main...deploy/github-pages-preview?expand=1 。分支所有变更已具备审查条件。
+- Pages 启用、Actions 执行和公网访问均未获得证据，仍标记为未验证。网页操作与验收清单见 PREVIEW。
+- 本补充记录再提交并推送同一分支；最新提交以 `git log -1` 为准。不合并 PR，不发布云环境。
