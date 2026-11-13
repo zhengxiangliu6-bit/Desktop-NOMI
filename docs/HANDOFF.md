@@ -1,3 +1,59 @@
+# H1 硬件固件交接
+
+更新：2026-11-13（Asia/Shanghai）。当前新增交付：**独立 ESP32-S3 圆屏表情固件 H1**。实体硬件、Windows 驱动/烧录/恢复未验证；现有阶段 2B 和 Pages Mock 保留，下方历史交接继续有效。
+
+## 基线与调查
+
+- 工作区起始干净，阅读 AGENTS、README、ARCHITECTURE、API_CONTRACT、ROADMAP、HANDOFF 及 Expression Adapter。`git fetch origin main` 后从最新 `e06e8a9` 创建 `feat/h1-esp32-face`，未修改 main。
+- 官方仓库固定提交 `5a98b8da1948340c07032a408ac0d93c47ca558f`，阅读 Rev1.1 原理图、README、ESP-IDF LVGL 示例、BSP 头文件/显示实现、Arduino 示例驱动及官方恢复指南。
+- 确认 ESP32-S3R8 / 16 MB Flash / 8 MB 八线 PSRAM；ST77916 360×360 QSPI；所有引脚来自该板，未借用其他板配置。官方框架 IDF 5.5.4 / LVGL 9.5.0。细节见 [HARDWARE_H1](HARDWARE_H1.md)。
+- 下载并核对官方合并镜像 20261109，10,514,658 字节，SHA256 `10dbcd2655fe44249840ff2b8879ff11152a7d73e1d6a3ebd8311c1f8e2b3b05`；esptool 4.11.0 image_info 识别 ESP32-S3，bootloader checksum/hash 有效。镜像未加入本仓库。
+- 官方恢复方式为合并镜像写 0x0（完整重置时先擦除）；自己整片备份则读取/验证 0x0 起 16 MB 后原址写回。两种恢复目的不同，文档已区分，未对设备执行。原理图 Key1 为电源、Key2 为 BOOT，不假设独立 RESET 按钮。
+
+## 设计与范围
+
+- 新增独立 `firmware/` ESP-IDF 5.5.4 工程。依赖仅 LVGL 9.5.0 固定提交 `85aa60d18b3d5e5588d7b247abf90198f07c8a63`，prepare.py 获取/核验，下载目录忽略。不依赖组件注册表、不打包 Web 运行时。
+- 显示层提取该板官方初始化表，保留两版面板 ID 选择、GPIO、80 MHz QSPI、RGB565 和首帧后背光；使用官方仓库随附的 Espressif ST77916 C 驱动，不将其冒充注册表 2.0.1。驱动逐字节核对，初始化表清理行尾空白后与上游核对一致。许可/修改见 [NOTICE](../firmware/components/nomi_panel/NOTICE.md)。
+- LVGL 固定图元绘制奶油色脸、眼睛、嘴、腮红/活动提示。idle/blink/happy/sad/curious/thinking/listening/speaking 均实现，安全半径 160；没有图片帧、Aora SVG/源码/素材。两个内部 DMA 条带缓冲总计 23,040 字节。
+- FaceModel 为独立 C++17 状态机：情绪/阶段正交、5 秒 TTL（内部可设 1..30000 ms）、工作态优先但不延长情绪、180 ms 插值、2.5–6 秒自然眨眼。眨眼覆盖后恢复原状态；非法输入回退 idle；单调 64 bit 时钟。
+- 主任务单独拥有状态机与 LVGL，20 ms 更新几何，FreeRTOS 5 ms yield；DMA 用信号量等待且超时 fail-fast，面板初始化保留必要协议延时。USB Serial/JTAG 有界非阻塞读取本地命令，支持 demo/status/idle；不实现远程设备协议。
+- 未初始化触摸、音频、传感器、SD、Wi-Fi，也未实现真实 AI、语音、记忆、舵机或 Device Adapter。listening/speaking 为无声动画。
+- Windows 先检查准确板型与安全状态、两份 16 MB 备份/哈希/verify_flash、下载校验官方镜像，再用 idf.py flash；不是将 app bin 写到 0x0。完整步骤与验收表见 HARDWARE_H1。
+
+## 验证记录
+
+- `python firmware/scripts/prepare.py`：LVGL 提交核验通过。
+- `g++ -std=c++17 -Wall -Wextra -Werror firmware/tests/face_model_test.cpp firmware/main/face_model.cpp -I firmware/main -o /tmp/nomi-face-model-test` 及执行：通过。
+- `cmake -S firmware/tests -B /tmp/nomi-render-tests -G Ninja -DNOMI_RENDER_TESTS=ON`、`cmake --build /tmp/nomi-render-tests -j 6`、`ctest --test-dir /tmp/nomi-render-tests --output-on-failure`：**2/2 通过**。一项覆盖核心状态/TTL/插值/非法值/长运行/跨 32 bit 毫秒；一项链接真实 LVGL 渲染八种表情，检查图像非空、连续表情不同、所有前景像素在半径 160 安全圆内，并输出八张 PPM。已查看合成预览；这是离屏渲染，不模拟显示硬件。
+- 初次原生构建缺少 cmake，使用临时 Python 环境安装构建工具；首次 renderer 编译发现 C++ 枚举位或需显式转换，已修正后重建通过。最初插值测试误复用非初始状态，改用新模型后通过，没有更改动画状态语义规避测试。
+- 官方表/驱动来源核对、Markdown 本地链接检查：通过。
+- 官方 IDF v5.5.4 源码提交 `735507283d5b2f9fb363a1901172dbd9e847945d`（子模块完整且干净），官方 tools.json 校验安装 Xtensa GCC `esp-14.2.0_20260121`。Linux Python 3.12.14 / CMake 3.30.5 / Ninja 1.13.2 / esptool 4.11.0。通用 Docker 镜像下载量大，取消下载，改用上述原生工具链构建；没有宣称在容器内运行成功。
+- 云端 Python 按 IDF requirements.core.txt 安装，`idf_tools.py check-python-dependencies` 通过；设置 IDF_PYTHON_CHECK_CONSTRAINTS=no，未使用另行下载的供应商 constraints 文件。没有关闭 TLS 或绕过网络策略。用户 Windows 仍按官方 v5.5.4 安装器配置。
+- ESP32-S3 `idf.py build`：**成功**，生成 app/bootloader/partition table/ELF/map/flash_args；最终 app bin **538,016 字节**，分区大小 0x177000（约 65% 余量）。`idf.py size` 成功，静态 DIRAM 约 80,423 字节；动态缓冲/实际 PSRAM 与总运行内存须实机日志确认。esptool image_info 检查 app 为 ESP32-S3、checksum/hash 有效。没有运行 flash/erase/monitor 或连接实体设备。
+- 首次 IDF 编译发现 Xtensa uint32_t 与主机 unsigned int 类型不同，std::clamp 推导失败；改为显式 std::clamp<uint32_t> 后目标构建成功。最终变更后重新执行目标 build/size、原生 2/2 测试及 AddressSanitizer/UndefinedBehaviorSanitizer 检查，全部通过。初次命令误将 -j 传给 idf.py，未开始编译，随后改用实际支持的 idf.py build。
+- IDF 首次配置存在上游 Kconfig 无 0x 前缀的弃用 NOTE，以及提示检测到 LVGL manifest 但组件管理器已禁用；这是固定 GitHub 依赖的预期行为。最终增量编译无 warning/error，未屏蔽编译诊断。
+- actionlint 1.7.7 检查新增 firmware.yml：通过。CI 容器固定官方 v5.5.4 amd64 manifest digest；远端工作流尚未在交付记录时确认执行。
+- 官方表/驱动来源核对、本次 Markdown 本地链接及 git diff --check：通过。
+- 新增独立 firmware.yml：原生状态/渲染测试 + IDF 5.5.4 目标构建，上传编译产物及第三方许可；无烧录/发布/部署步骤。远端 Actions 运行结果另行记录，未执行不算通过。
+- 前后端运行代码、.env.example、Pages 工作流差异为空；本阶段未重跑不受影响的 Web/后端测试，没有更改 Key 或生产 Mock 机制。
+
+## 已知限制与下一步
+
+- **没有接入实体板。** 实际 PSRAM、LCD ID/批次、QSPI 时序、颜色/方向、闪烁/撕裂、USB 重枚举、串口响应、Windows 工具链/驱动、备份/烧录/恢复、30 分钟稳定性均未验证。
+- 未知面板 ID 使用官方驱动默认表并报警日志；不能将此回退声称为支持新硬件版本。先收集该板 ID/丝印/日志，不套用别的板引脚。
+- 软件目标与硬件实测必须分别记录；照 HARDWARE_H1 表逐项验收。任何恢复实际执行都以自己同板未加密备份与已核对官方镜像为依据。
+- 触摸未接入，串口可测试全部表情；如需触摸交互、AI/音频/舵机或主机通信，另定后续阶段。
+
+## 修改文件与恢复入口
+
+新增 firmware/（工程/锁定依赖获取脚本/显示驱动与许可/状态机/渲染/主循环/原生测试）、.github/workflows/firmware.yml、docs/HARDWARE_H1.md；更新 README、ARCHITECTURE、ROADMAP、本交接。硬件备份不入库。工程恢复用分支提交，实体恢复用 HARDWARE_H1 两种方案；不要将两者混淆。
+
+## 提交与 PR
+
+待最终验证后记录分支推送、提交与 PR 的真实结果。
+
+---
+
 # 任务交接
 
 更新：2026-11-11（Asia/Shanghai）。当前交付：**阶段 2B，前后端文字对话集成**。默认/生产/Pages 保持纯前端 Mock，显式开发 API 模式通过同源 Vite Proxy 连接 loopback FastAPI。没有语音、长期记忆、硬件或公网后端部署。

@@ -1,0 +1,6 @@
+build/
+sdkconfig
+sdkconfig.old
+components/lvgl/
+__pycache__/
+*.bin

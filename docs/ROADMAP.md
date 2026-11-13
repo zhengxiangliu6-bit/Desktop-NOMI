@@ -1,5 +1,9 @@
 # V0 路线图
 
+## 独立硬件阶段 H1（本次授权）
+
+目标为 Waveshare ESP32-S3-Touch-LCD-1.85B 的独立开机表情固件，包含 idle/blink/happy/sad/curious/thinking/listening/speaking、非阻塞状态切换、TTL 回退、串口测试、Windows 备份/恢复/烧录说明。仅此阶段获得实体硬件软件开发授权；不接 AI、语音、记忆、舵机或前后端设备协议。代码与云端验证见 [firmware](../firmware/README.md) / [HANDOFF](HANDOFF.md)，实体设备验收按 [HARDWARE_H1](HARDWARE_H1.md) 执行，当前未验证。下方 V0.4/V0.5 等不会因此提前完成。
+
 阶段按依赖顺序推进，每次任务只实现明确授权阶段。V0.0 已交付，阶段 1 前端 Mock 原型已实现；阶段 2A 已交付后端基础与 health，2B 已完成 Mock Provider 的 HTTP 集成，Windows 实机和真实模型验证尚未完成。以下全栈阶段验收门槛不因此视为全部通过。
 
 | 阶段 | 范围 | 验收标准 |
