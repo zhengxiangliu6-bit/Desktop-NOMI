@@ -1,5 +1,11 @@
 # 技术架构（V0 目标设计）
 
+## 独立硬件 H1
+
+新增 `firmware/` ESP-IDF 5.5.4 + LVGL 9.5.0 工程，仅针对 Waveshare ESP32-S3-Touch-LCD-1.85B。`main/face_model` 管理情绪、阶段、TTL、自然眨眼与插值；`face_view` 只把几何帧映射到 LVGL 图元；`components/nomi_panel` 使用该板官方 ST77916 QSPI 引脚、两版初始化表和部分 DMA 双缓冲。LVGL 与状态机只由主任务操作，串口命令在同一任务内消费，不存在跨任务直接修改界面。
+
+H1 独立上电显示脸，不加载 React/Aora，不消费 HTTP emotion/motion，不连接后端，也不实现 Device Adapter 传输、音频/AI/记忆/舵机。阶段与情绪分离；有界本地串口仅供硬件测试，未知输入回退 idle。触摸暂不启用。网页与后端 API 契约没有变化。准确板型、版本证据及恢复流程见 [HARDWARE_H1](HARDWARE_H1.md)，构建/测试见 [firmware](../firmware/README.md)。软件验证不等于实体硬件通过。
+
 状态：前端阶段 1 Mock、阶段 2A 后端与阶段 2B 开发 HTTP 集成已实现；全栈持久化、语音与硬件仍为目标设计。接口字段以 [API_CONTRACT](API_CONTRACT.md) 为准，阶段以 [ROADMAP](ROADMAP.md) 为准。
 
 ## 阶段 2B 已实现边界
