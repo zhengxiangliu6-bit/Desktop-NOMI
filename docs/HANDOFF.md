@@ -50,7 +50,10 @@
 
 ## 提交与 PR
 
-待最终验证后记录分支推送、提交与 PR 的真实结果。
+- 实现提交 `a475b76`：`feat: add H1 ESP32-S3 round-screen expression firmware`。
+- `git push -u origin feat/h1-esp32-face`：成功。
+- 已创建 [PR #6](https://github.com/zhengxiangliu6-bit/Desktop-NOMI/pull/6)，base=main、head=feat/h1-esp32-face；未合并、未部署。
+- 本交付记录作为后续文档提交推送同一分支；最新提交以分支日志为准。
 
 ---
 
