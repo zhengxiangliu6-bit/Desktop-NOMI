@@ -1,6 +1,15 @@
 # H2 本地音频与唤醒交接
 
-更新：2026-11-15（Asia/Shanghai）。**目标“小米同学”准确模型未获得，不能宣称目标词唤醒完成。** 本阶段交付本地采集/AFE与单独“小爱同学”技术基准代码、双profile固件ZIP；H2新音频与真实唤醒运行均待用户实机验证。
+更新：2026-11-15（Asia/Shanghai）。**目标“小米同学”准确模型未获得，不能宣称目标词唤醒完成。** 本阶段交付本地采集/AFE与单独“小爱同学”技术基准代码、双profile固件ZIP；H2首次用户实机音频测试已发现AFE故障；0.2.1修复构建待实机复测，真实唤醒仍未验证。
+
+## H2 0.2.1：首次实机 AFE 停滞修复
+
+- 用户成功刷写默认audio包，初始化日志确认ES7210/ES8311打开、I2S 16kHz/16bit/stereo和AFE管线建立；随后`blocks=521 fetched=5 state=4`。重新初始化仍出现FEED ring full/FETCH empty及`AFE fetch stalled`。不能将初始化成功当作麦克风、AFE持续运行或唤醒验收通过。
+- 对固定ESP-SR 2.0.1单麦预编译库的feed/create/VAD实现作反汇编核对：ring单位为1024字节，VAD保留speech+delay历史，feed满时返回0。原5单位5120字节低于128+128ms的8192字节历史需求，是明确的容量配置缺陷，与用户故障吻合；此前仅检查feed<0也漏报丢帧。
+- 修改`firmware/main/wake/wake_word_controller.cpp`：ring=50（51200字节有界缓冲，MORE_PSRAM保持）、显式VAD speech/delay各128ms，新增`AFE_BUFFER`配置日志；feed<=0立即停止本轮。未改引脚、采样率、表情、串口demo或模型。
+- `firmware/CMakeLists.txt`版本0.2.1；同步`docs/HARDWARE_H2.md`及本交接。不增加组件、不购买模型，不上传原始日志/音频。
+- 本地原生CTest 3/3、Python构建审计4/4通过；audio目标编译/模型与链接入口审计通过。benchmark及远端CI结果见后续交付记录。
+- 复测：刷写0.2.1 audio包后确认`AFE_BUFFER ring_units=50`，观察开机、说话/安静与`status`，至少间隔10秒采样两次；state=2、blocks/fetched均持续增长、无full/stalled/新增overflow才可继续30分钟测试。重复off/on/reinit及demo回归。当前没有实体修复通过证据；准确“小米同学”模型依旧不可用。
 
 ## 开始调查与基线
 

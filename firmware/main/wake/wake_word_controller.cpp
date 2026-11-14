@@ -82,7 +82,15 @@ bool WakeWordController::initialize()
     cfg->wakenet_model_name = model_name; cfg->wakenet_model_name_2 = nullptr;
     cfg->agc_init = false; cfg->debug_init = false;
     cfg->memory_alloc_mode = AFE_MEMORY_ALLOC_MORE_PSRAM;
-    cfg->afe_perferred_core = 0; cfg->afe_perferred_priority = 3; cfg->afe_ringbuf_size = 5;
+    cfg->afe_perferred_core = 0; cfg->afe_perferred_priority = 3;
+    // Pinned ESP-SR 2.0.1 single-mic ring units are 1024 bytes, NOT feed chunks.
+    // VAD retains (speech + delay) * 16kHz * sizeof(int16_t) = 8192 bytes.
+    // The old 5-unit (5120-byte) ring exhausted its writable space after five
+    // fetches. Keep headroom for retained history, fetch and producer scheduling.
+    cfg->vad_min_speech_ms = 128; cfg->vad_delay_ms = 128;
+    cfg->afe_ringbuf_size = 50;
+    ESP_LOGI(TAG, "AFE_BUFFER ring_units=%d vad_speech_ms=%d vad_delay_ms=%d",
+             cfg->afe_ringbuf_size, cfg->vad_min_speech_ms, cfg->vad_delay_ms);
     afe_ = esp_afe_handle_from_config(cfg);
     if (afe_) afe_data_ = afe_->create_from_config(cfg);
     afe_config_free(cfg);
@@ -154,7 +162,9 @@ void WakeWordController::capture_loop()
                 feeding_ = true;
                 const int fed = afe_->feed(afe_data_, mono_);
                 feeding_ = false;
-                if (fed < 0) { fault("AFE feed"); break; }
+                // In this pinned library, a full ring returns zero (not a negative error).
+                // Fail immediately rather than silently discarding PCM until fetch stalls.
+                if (fed <= 0) { fault("AFE feed rejected PCM (full ring/error)"); break; }
             }
         }
         if (!cleanup()) { for (;;) vTaskDelay(pdMS_TO_TICKS(1000)); }

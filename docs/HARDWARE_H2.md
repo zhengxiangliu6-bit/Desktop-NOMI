@@ -72,7 +72,7 @@ H1 用户日志可用内部 RAM 324,575 字节、PSRAM 8,386,308 字节；它只
 初始化不在显示任务运行。关闭/重初始化先停采集，再等待 fetch 退出本轮才销毁 AFE/模型；停机超时保留仍在用的资源并报告需重启，防止释放后继续使用。
 
 - I²S DMA 6×240 stereo帧；warmup约200ms。逐段收齐整块，检查4字节帧对齐，MIC1 转 mono 后按 AFE 查询的 chunk 喂入。
-- AFE ringbuffer设为5帧；数据/队列满、格式错误、I²S连续超时、fetch停滞均记录故障并停止本轮，**不把断续/过期音频当正常语料，也不伪造唤醒**。启动warmup可能发生的溢出单独计数，稳定运行新增溢出视为异常。
+- AFE ringbuffer设为50个库内部单位（固定ESP-SR 2.0.1单麦每单位1024字节）；VAD speech/delay各128ms，历史预留8192字节。旧版5单位不足，用户实机出现feed满/fetch空；0.2.1扩大有界缓存并将feed返回0视为故障，实机修复待复测。数据/队列满、格式错误、I²S连续超时、fetch停滞均记录故障并停止本轮，**不把断续/过期音频当正常语料，也不伪造唤醒**。启动warmup可能发生的溢出单独计数，稳定运行新增溢出视为异常。
 - 每个运行会话仅发送一次实际唤醒事件。benchmark 日志为 `WAKE_WORD_DETECTED model=wn9_xiaoaitongxue phrase=小爱同学 benchmark_only=1 target_xiaomi_available=0`。
 - 正常唤醒后主任务保持 Listening，等待后续语音系统；`idle`/其他表情命令退出保持，`wake on` 或 `wake reinit` 建立新会话并重新布防。
 - **demo优先**：不被唤醒打断，demo中的检测事件不切屏且记录忽略；本轮检测若已锁存，demo后用 `wake on` 再布防。`status` 不打断 demo/Listening。音频故障不会导致原有表情不可用。
