@@ -137,7 +137,7 @@ extern "C" void app_main()
     uint64_t previous_frame = 0;
     uint64_t frame_at = 0;
     while (true) {
-        const uint64_t now = now_ms();
+        uint64_t now = now_ms();
         read_commands(now);
         nomi::WakeEvent event;
         while (wake.poll(event)) {
@@ -148,6 +148,7 @@ extern "C" void app_main()
         }
         nomi::VoiceEvent voice_event;
         while (wake.poll_voice(voice_event)) {
+            now = now_ms(); // Serial output may have yielded while inference queued a newer event.
             const auto action = voice_session.accept(voice_event, wake.epoch(), now, demo || wake.faulted());
             if (action == nomi::VoiceAction::Wake) {
                 wake_latch.clear(); model.reset(now); voice_hold = true;
