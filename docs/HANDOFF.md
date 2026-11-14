@@ -94,7 +94,11 @@ firmware/tests/wake_logic_test.cpp
 - 实现提交 `3975363`，已成功推送 `feat/h2-local-wakeword`。
 - 首轮云端运行43619456065：原生检查成功，两个固件都完成目标编译/size/模型与ELF审计，但打包读取Git元数据遇到Actions容器UID归属检查（dubious ownership），未上传产物。修复为每次Git查询只信任当前仓库的准确绝对路径，不改全局配置、不使用通配信任。I²S格式/关闭修正提交d335bf7也已推送，最终产物以修复后的最新成功运行和manifest的source_commit为准。
 - 使用全新临时目录实际运行prepare的SR/Codec sparse fetch/checkout与模型哈希检查：通过；不是仅复用已安装依赖。
-- 按用户要求未创建PR、未合并main，原厂备份不在本工作区。后续远端最终结果另行补录。
+- 修复提交 `192687d` 已推送；真实Git ownership拒绝在本地通过GIT_TEST_ASSUME_DIFFERENT_OWNER复现，精确仓库作用域查询成功。I²S修正为 `d335bf7`。
+- 最新 [Actions运行43619895196](https://github.com/zhengxiangliu6-bit/Desktop-NOMI/actions/runs/43619895196)，source=192687dd077c4d8a66086f426962b16dbdd5bfa3：**native、esp32s3(audio)、esp32s3(benchmark)三项全部success**，两个ZIP均已上传且未过期。
+- 云端下载产物：desktop-nomi-h2-audio（artifact14123896819）、desktop-nomi-h2-benchmark（artifact14123593493）；进入上述成功运行的Artifacts下载。ZIP/manifest/source_commit与本次对应，不依赖创建PR。产物的二进制大小/哈希可能因编译环境/路径与本地不同，以所下载manifest为准。
+- 本地两个ZIP已在干净source=192687d状态重新构建/打包，逐文件哈希与词身份验证通过；最终交付说明另作文档提交，不改变固件代码。
+- 按用户要求未创建PR、未合并main，原厂备份不在本工作区。
 
 ---
 
