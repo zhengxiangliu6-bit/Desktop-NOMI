@@ -26,6 +26,17 @@
 - Windows刷写、模型真正初始化、准确“小米同学”激活、表情指令识别、误识别/漏识别、30分钟稳定性、断开电脑独立供电均**待用户实测**。当前没有实体板可用于助手验证；不将自动测试的合成事件算语音识别成功。
 - 交付ZIP `desktop-nomi-h2-commands.zip`，步骤及正负样本验收见 [HARDWARE_VOICE](HARDWARE_VOICE.md)。首次先确认绿点，然后说“小米同学”观察蓝点/Listening，再说“开心一点”；每次看实际动作，而非仅看VAD电平。
 
+
+## 最终交付记录
+
+- 代码提交`fe1c05d`，UI在消费语音事件前刷新时钟的修复`041a5b7`；均已推送`feat/h2-offline-voice-commands`。不创建PR，不合并main。
+- 最终本地三个profile重新构建并打包通过：commands app **1,135,008** 字节 / 模型 **2,681,351** 字节，audio app1,046,704 / 无模型4字节，benchmark app1,049,952 / 模型291,150字节。
+- 三个ZIP逐文件SHA256复核通过，manifest来源`041a5b7056e9e4f23be8840782c095cf21f3595a`、`source_dirty=false`；可配置激活label/pinyin从实际sdkconfig写入manifest，不把自定义名称硬写成默认名。
+- [GitHub Actions运行43624614822](https://github.com/zhengxiangliu6-bit/Desktop-NOMI/actions/runs/43624614822)：native、esp32s3 audio、benchmark、commands四个job均success。三个ZIP产物已生成，commands artifact ID **14124958822**。云端成功不代表Windows刷写或实体识别通过。
+- 本地可下载`firmware/dist/desktop-nomi-h2-commands-v0.3.0.zip`（与commands.zip内容相同）。本次新增真实语音验收仍待用户：绿点就绪→“小米同学”蓝点/Listening→“开心一点”Happy；再执行负样本、睡眠/超时、20次唤醒/每指令5次及30分钟稳定性。
+- 本地并行构建共享`.deps`时，先单次prepare，再用`--skip-prepare`并行独立profile，避免Git稀疏checkout索引锁竞争；本次曾遇该锁竞争，复用已校验依赖重跑后通过。CI各job独立checkout，无该共享目录问题。
+- Markdown相对链接与actionlint、git diff空白检查通过；本记录为后续文档提交，固件源码与CI来源仍为041a5b7。
+
 ---
 
 # H2 本地音频与唤醒交接
