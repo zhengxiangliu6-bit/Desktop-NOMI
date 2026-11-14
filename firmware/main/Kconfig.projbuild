@@ -1,0 +1,11 @@
+menu "Desktop-NOMI H2 local audio"
+choice NOMI_WAKE_PROFILE
+    prompt "Wake-word profile (no Xiaomi Tongxue model is available)"
+    default NOMI_WAKE_AUDIO_ONLY
+    config NOMI_WAKE_AUDIO_ONLY
+        bool "Audio + AFE only; Xiaomi Tongxue unavailable"
+    config NOMI_WAKE_BENCHMARK
+        bool "BENCHMARK ONLY: Xiaoai Tongxue (not Xiaomi Tongxue)"
+        select SR_WN_WN9_XIAOAITONGXUE
+endchoice
+endmenu

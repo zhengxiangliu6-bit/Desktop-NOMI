@@ -1,5 +1,11 @@
 # 技术架构（V0 目标设计）
 
+## 独立硬件 H2
+
+在已验证H1的分支基础上，新增 `nomi_audio`（该板ES7210双麦+静音ES8311初始化）与独立 `WakeWordController`。capture任务独占音频资源、读取16kHz stereo PCM16、提取MIC1并feed AFE；fetch任务消费AFE/NS/VAD/WakeNet输出；显示任务只处理有界事件和LVGL。FaceModel未改，Listening保持由显示协调层负责。队列/epoch隔离启停与迟到事件，停机等待fetch退出本轮后再释放AFE资源，故障不关闭原表情功能。
+
+默认audio profile不装唤醒模型；benchmark profile只装“小爱同学”wn9_xiaoaitongxue，启动/检测/产物均标明它不是“小米同学”。目标词准确模型未获得。本地连续采集由用户本阶段授权，wake off可停止；无PCM存储、无网络初始化/音频上传、无ASR/LLM/TTS/触摸/记忆/舵机。它不是新的后端Device Adapter或HTTP协议。源版本、训练研究、构建与四层验收见 [HARDWARE_H2](HARDWARE_H2.md)。H2新音频尚未实机测试。
+
 ## 独立硬件 H1
 
 新增 `firmware/` ESP-IDF 5.5.4 + LVGL 9.5.0 工程，仅针对 Waveshare ESP32-S3-Touch-LCD-1.85B。`main/face_model` 管理情绪、阶段、TTL、自然眨眼与插值；`face_view` 只把几何帧映射到 LVGL 图元；`components/nomi_panel` 使用该板官方 ST77916 QSPI 引脚、两版初始化表和部分 DMA 双缓冲。LVGL 与状态机只由主任务操作，串口命令在同一任务内消费，不存在跨任务直接修改界面。

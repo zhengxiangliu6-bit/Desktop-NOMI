@@ -1,5 +1,6 @@
 #include "face_model.h"
 #include "face_view.h"
+#include "wake_word_controller.h"
 #include "nomi_panel.h"
 #include "esp_check.h"
 #include "esp_log.h"
@@ -18,12 +19,18 @@ uint64_t now_ms() { return uint64_t(esp_timer_get_time()) / 1000; }
 uint32_t lv_clock() { return uint32_t(now_ms()); }
 nomi::FaceModel model;
 nomi::FaceView view;
+nomi::WakeWordController wake;
+nomi::WakeLatch wake_latch;
+uint32_t max_frame_gap_ms = 0;
 bool demo = false;
 unsigned demo_step = 0;
 uint64_t demo_at = 0;
 const char *const sequence[] = {"idle", "blink", "happy", "sad", "curious", "thinking", "listening", "speaking"};
 void status()
 {
+    wake.status();
+    ESP_LOGI(TAG, "uptime_ms=%llu main_stack_free_bytes=%u max_frame_gap_ms=%lu",
+             (unsigned long long)now_ms(), unsigned(uxTaskGetStackHighWaterMark(nullptr)), (unsigned long)max_frame_gap_ms);
     ESP_LOGI(TAG, "phase=%d emotion=%d internal_free=%u psram_free=%u min_heap=%u",
              int(model.phase()), int(model.emotion()),
              unsigned(heap_caps_get_free_size(MALLOC_CAP_INTERNAL)),
@@ -33,6 +40,14 @@ void status()
 void command(const char *text, uint64_t now)
 {
     if (!std::strcmp(text, "status")) { status(); return; }
+    if (!std::strcmp(text, "wake status")) { wake.status(); return; }
+    if (!std::strcmp(text, "wake on") || !std::strcmp(text, "wake reinit") || !std::strcmp(text, "wake off")) {
+        wake_latch.clear();
+        if (!demo) model.reset(now);
+        wake.enable(std::strcmp(text, "wake off") != 0);
+        return;
+    }
+    wake_latch.clear();
     demo = false;
     if (!std::strcmp(text, "demo")) {
         model.reset(now); demo = true; demo_step = 0; demo_at = now;
@@ -67,7 +82,7 @@ void read_commands(uint64_t now)
 }
 extern "C" void app_main()
 {
-    ESP_LOGI(TAG, "Desktop-NOMI H1; Waveshare ESP32-S3-Touch-LCD-1.85B only; no AI/audio/network");
+    ESP_LOGI(TAG, "Desktop-NOMI H2; Waveshare ESP32-S3-Touch-LCD-1.85B; local microphone, no ASR/LLM/TTS/network");
     ESP_LOGI(TAG, "ESP-IDF %s; LVGL %d.%d.%d", esp_get_idf_version(),
              LVGL_VERSION_MAJOR, LVGL_VERSION_MINOR, LVGL_VERSION_PATCH);
     ESP_LOGI(TAG, "PSRAM initialized=%d size=%u", esp_psram_is_initialized(), unsigned(esp_psram_get_size()));
@@ -83,11 +98,23 @@ extern "C" void app_main()
     view.render(model.update(now_ms()), model.phase());
     nomi_panel_show();
     ESP_LOGI(TAG, "Commands + Enter: idle blink happy sad curious thinking listening speaking demo status");
+    wake.start();
+    ESP_LOGI(TAG, "Local microphone requested. Commands: wake off | wake on | wake reinit | wake status");
     status();
+    uint64_t previous_frame = 0;
     uint64_t frame_at = 0;
     while (true) {
         const uint64_t now = now_ms();
         read_commands(now);
+        nomi::WakeEvent event;
+        while (wake.poll(event)) {
+            if (wake_latch.accept(event, wake.epoch(), demo)) {
+                model.reset(now);
+                ESP_LOGI(TAG, "LISTENING_HELD source=benchmark_xiaoai_tongxue; use idle or wake off to leave");
+            } else ESP_LOGW(TAG, "Wake UI event ignored (demo, stale generation, or duplicate)");
+        }
+        if (wake.faulted() && wake_latch.held()) { wake_latch.clear(); model.reset(now); }
+        if (wake_latch.held()) model.set_phase(nomi::Phase::Listening, now);
         if (demo && now >= demo_at) {
             if (demo_step == sizeof(sequence) / sizeof(sequence[0])) {
                 demo = false; model.reset(now); ESP_LOGI(TAG, "Demo complete; idle");
@@ -100,6 +127,8 @@ extern "C" void app_main()
             }
         }
         if (now >= frame_at) {
+            if (previous_frame && now - previous_frame > max_frame_gap_ms) max_frame_gap_ms = now - previous_frame;
+            previous_frame = now;
             auto frame = model.update(now);
             view.render(frame, model.phase());
             frame_at = now + 20;

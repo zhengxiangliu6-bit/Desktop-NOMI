@@ -4,3 +4,7 @@ sdkconfig.old
 components/lvgl/
 __pycache__/
 *.bin
+.deps/
+build-*/
+sdkconfig.*.local
+dist/

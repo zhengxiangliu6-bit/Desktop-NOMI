@@ -1,3 +1,99 @@
+# H2 本地音频与唤醒交接
+
+更新：2026-11-15（Asia/Shanghai）。**目标“小米同学”准确模型未获得，不能宣称目标词唤醒完成。** 本阶段交付本地采集/AFE与单独“小爱同学”技术基准代码、双profile固件ZIP；H2新音频与真实唤醒运行均待用户实机验证。
+
+## 开始调查与基线
+
+- 开始分支 `feat/h1-esp32-face` / `c858ce9`，工作区干净；读取AGENTS、README、ARCHITECTURE、API_CONTRACT、ROADMAP、firmware/H1实现、本交接，检查无子目录AGENTS。`git fetch origin main` 后 main仍为 `e06e8a9`，H1尚未在main。因此从已验证H1提交创建独立 `feat/h2-local-wakeword`，不丢弃H1实现、不修改main。
+- 本阶段按用户明确要求：**不创建PR、不合并main**，该要求优先于AGENTS默认PR流程；不自动擦除/刷写、不覆盖用户备份、不购买训练服务、不调用ASR/LLM/TTS。
+- 使用现有官方IDF源码 v5.5.4（提交735507283d5b2f9fb363a1901172dbd9e847945d）、Xtensa GCC esp-14.2.0_20260121、Python3.12.14、CMake3.30.5、Ninja1.13.2；保留既有可写工具环境和正常TLS。`idf.py --version` 确认为5.5.4。
+- 写代码前已调查官方1.85B固定提交 `5a98b8da1948340c07032a408ac0d93c47ca558f` 的06_mic_test、BSP音频与bsp_extra、原理图；现有H1无音频组件。用户给的docs.waveshare.com域名被云代理拒绝，未声称成功阅读该网页，使用同板官方GitHub源码/原理图核对。
+
+## H1 实机证据补录（来自本会话用户，不是助手连接硬件）
+
+- 用户Windows实际安装ESP-IDF5.5.4，设备识别S3 revision0.2、16MB Flash、8MB PSRAM、USB Serial/JTAG；Secure Boot和Flash Encryption均Disabled。
+- 两份完整16MB原厂备份SHA256相同，verify_flash明确`verify OK (digest matched)`；原厂备份保存在用户本机，未上传/写入本仓库。未实际执行原厂恢复。
+- 用户Windows编译成功，app538,016字节；刷写bootloader/app/分区表全部Hash verified，复位显示脸/眨眼，demo八种表情连续两轮正常。用户反馈部分表情变化较小，暂不影响验收，不在H2改外观。
+- 用户H1 status：内部可用324,575字节、PSRAM可用8,386,308字节；这些是加音频前的余量。30分钟稳定性、重复断电启动、实际恢复仍未获得结果。
+
+## 模型结论与实现决策
+
+- 核查ESP-SR master2.6.2（bb552f1a559396a17681299cb3e199a0f1a4520a）的README、Kconfig、wakeword_list和模型目录：未找到“小米同学”，有“小爱同学”“小明同学”，不能混同。
+- 集成锁定ESP-SR manifest2.0.1（上游tag名v2.0.0）、ESP-DSP1.4.14、esp_codec_dev1.6.2、LVGL9.5.0；完整SHA/基准模型文件SHA256见firmware/dependencies.lock.json，许可/版本差异见nomi_audio/NOTICE。采用成熟WakeNet9组合，未增加最新WakeNet10的esp-dl/dl_fft依赖。
+- 默认audio profile：本地双麦采集、MIC1->AFE/NS/WebRTC VAD，不加载唤醒模型；benchmark profile：唯一wn9_xiaoaitongxue，“小爱同学”，每次启动/检测和ZIP元数据均明确benchmark与target_model_available=false。
+- 本次没有准确目标模型、没有训练或购买。官方支持TTS样本定制：一次性费用需询价、无公开固定金额；issue#88社区征集存在项目/点赞门槛、单独提交协议及无交付时限，未代用户提交。自训microWakeWord/中文TTS语料可后续研究，但格式/运行时/语料与算力成本另评估，不能直接替换WakeNet。详细证据/费用/格式/替代限制见HARDWARE_H2。
+
+## 硬件、并发与内存
+
+- 同板ES7210双模拟麦、ES8311输出Codec，麦克风原理图只给工作电压描述，未公开可确认的采购型号。I²C1 SDA11/SCL10、ES7210 0x40、ES8311 0x18；I²S1 MCLK2/BCLK48/LRCLK38/DOUT47/DIN39，PA9强制关闭。显式400kHz I²C，16kHz signed PCM16 stereo slot0/1。
+- 独立nomi_audio改写官方初始化，保留静音DAC时钟路径，两个麦都采集但仅MIC1送AFE单麦M格式，MIC2仅电平诊断。不伪造回放参考，不启用AEC/SE/AGC，不录音/回放、不写PCM/上传。
+- WakeWordController：capture CPU0/prio4/8192字节栈、fetch CPU1/prio3/8192字节栈；主显示CPU1。AFE MORE_PSRAM、LOW_COST、5帧ringbuffer、内部任务偏好CPU0/prio3，raw stereo+mono最大6144字节；H1显示DMA仍23,040字节。
+- 请求队列1、事件队列4、epoch作废迟到事件；off/on/reinit异步，不在渲染任务做Codec/模型初始化。检查PCM对齐/采样契约、溢出、读超时、fetch停滞、内存分配；停机等待fetch本轮退出再destroy，超时保留仍在用资源报告需重启。第三方预编译库若自身卡死仍可能需硬件重启，不能声称云端验证了这些故障路径。
+- 正常检测后保持Listening；串口idle/其他表情可退出，wake on/reinit重新布防。demo不被检测事件打断，demo期间若检测已锁存需之后重新布防。FaceModel/FaceView/显示驱动源码未改。
+- 状态有MIC peak_hold/rms/削波、blocks/fetched/VAD、超时/溢出/drop、栈余量、任务累计runtime（包含AFE/idle任务）和UI最大帧间隔。soak.py按差值估计单核占用；没有伪造CPU或30分钟数据。
+
+## 已执行验证与真实结果
+
+- `python firmware/scripts/prepare.py`：四个官方依赖提交与模型SHA256核验通过；不依赖组件注册表，第三方checkout保持干净。
+- `python firmware/scripts/build.py --profile audio --package`：IDF build/size、模型数0、偏移/ELF运行入口审计通过，app **1,043,968字节**，模型镜像 **4字节**。静态DIRAM约104,735字节。
+- `python firmware/scripts/build.py --profile benchmark --package`：同样通过，app **1,047,200字节**，模型 **291,150字节**（唯一小爱同学）；静态DIRAM约104,947字节。app4MB/model2MB分区，均在16MB内；运行堆/CPU/栈还须实机测。
+- ELF未发现esp_wifi_init、esp_http_client_init、esp_tls_conn_new、esp_mn_handle_from_name、esp_tts_create运行入口；源码没有网络初始化/上传、ASR/LLM/TTS调用。上游SR CMake声明TTS/MultiNet静态库不代表本固件启用了它们。
+- `cmake -S firmware/tests -B /tmp/nomi-h2-tests -G Ninja -DNOMI_RENDER_TESTS=ON`、build、ctest：**3/3通过**（H1核心状态、八表情真实LVGL离屏渲染、wake/PCM策略）。覆盖旧epoch、重复/未验证模型、demo隔离、Listening保持、极值/静音/声道/对齐。
+- `python -m unittest discover -s firmware/tests -p 'test_*.py' -v`：**4/4通过**，覆盖错误模型/数量/profile/芯片/偏移/网络和ASR/TTS入口拒绝。它只测试打包审计，不是假音频冒充模型成功。
+- wake_logic_test C++17 `-Wall -Wextra -Werror -fsanitize=address,undefined`：通过。Python工具py_compile、actionlint1.7.7、Markdown链接/围栏、git diff --check：通过。ZIP逐文件SHA256与manifest/profile核对通过。
+- 调试中先修正SR在禁用组件管理器时需显式REQUIRES espressif__esp-dsp、Codec GPIO释放函数名；正式构建已通过。一次命令工作目录错误只影响云端临时路径，已改脚本使用绝对隔离build目录并移除误生成目录。审阅固定SR源码发现get_wake_words返回malloc字符串，成功/失败路径都加了free，避免每次reinit泄漏；随后重新构建两profile通过。
+- 前后端/API Key/Pages工作流无变更；不受影响的Web/后端测试未重复执行。没有连接用户COM3、执行flash/erase/付费请求或实机30分钟测试。
+
+## 产物、烧录与剩余验收
+
+- 本地ZIP：firmware/dist/desktop-nomi-h2-audio.zip、desktop-nomi-h2-benchmark.zip，未提交二进制；包含准确flash_args、app/bootloader/表/model、ELF/map、sdkconfig、源提交/模型身份/哈希manifest及第三方许可。
+- 独立firmware.yml在本H2分支push触发，不需要PR；两profile矩阵构建、打包并upload-artifact。远端运行及下载入口在推送后补录，不将本地编译说成远端已成功。
+- Windows优先下载对应成功artifact解压，在flash_args所在目录用现有ESP-IDF终端 `python -m esptool --chip esp32s3 --port COM3 --baud 460800 write_flash "@flash_args"`；先核对当前COM与板型/profile/哈希，**不能遗漏model、不能先erase_flash、不能覆盖原厂备份**。详细步骤见HARDWARE_H2。
+- 分层结论：音频驱动=集成/编译通过、实际待测；ESP-SR框架=API集成/编译通过、运行待测；小爱基准=编译/身份核验通过、真实识别待测；小米同学=模型不可用、未完成。前三项不能替代第四项。
+- 用户需实测麦克风电平/格式/Codec时序、AFE初始化与持续运行、基准正负样本、Listening保持、demo、10轮off/on/reinit、30分钟RAM/PSRAM/CPU/栈/复位情况。恢复与硬件长稳仍未验证。
+- 后续先完成音频/基准验收与准确唤醒模型来源决策，再单独授权ASR Adapter、有界聆听窗口/VAD结束、取消/错误恢复；本阶段不预先接ASR/LLM/TTS。
+
+## 实际修改文件（相对H1 c858ce9）
+
+```text
+.github/workflows/firmware.yml
+README.md
+docs/ARCHITECTURE.md
+docs/HANDOFF.md
+docs/HARDWARE_H1.md
+docs/HARDWARE_H2.md
+docs/ROADMAP.md
+firmware/.gitignore
+firmware/CMakeLists.txt
+firmware/README.md
+firmware/components/nomi_audio/CMakeLists.txt
+firmware/components/nomi_audio/NOTICE.md
+firmware/components/nomi_audio/audio_input.cpp
+firmware/components/nomi_audio/include/audio_input.h
+firmware/dependencies.lock.json
+firmware/main/CMakeLists.txt
+firmware/main/Kconfig.projbuild
+firmware/main/main.cpp
+firmware/main/wake/wake_logic.h
+firmware/main/wake/wake_word_controller.cpp
+firmware/main/wake/wake_word_controller.h
+firmware/partitions.csv
+firmware/scripts/build.py
+firmware/scripts/prepare.py
+firmware/scripts/soak.py
+firmware/sdkconfig.benchmark
+firmware/sdkconfig.defaults
+firmware/tests/CMakeLists.txt
+firmware/tests/test_build_tools.py
+firmware/tests/wake_logic_test.cpp
+```
+
+## 提交与推送
+
+待推送后补录真实结果；按用户要求不创建PR、不合并main。
+
+---
+
 # H1 硬件固件交接
 
 更新：2026-11-13（Asia/Shanghai）。当前新增交付：**独立 ESP32-S3 圆屏表情固件 H1**。实体硬件、Windows 驱动/烧录/恢复未验证；现有阶段 2B 和 Pages Mock 保留，下方历史交接继续有效。

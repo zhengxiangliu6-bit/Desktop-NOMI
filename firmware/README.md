@@ -1,62 +1,69 @@
-# Desktop-NOMI H1 固件
+# Desktop-NOMI H2 固件
 
-目标仅为 **Waveshare ESP32-S3-Touch-LCD-1.85B，360×360**。这是独立 ESP-IDF 工程，不运行 React/Aora，不连接前后端，不含 Wi-Fi、AI、录音、播放、记忆或舵机。启动直接绘制 NOMI 的脸，完成首帧后才打开背光。
+目标仅为 **Waveshare ESP32-S3-Touch-LCD-1.85B，360×360**。保留H1八种表情与串口demo，加入本地麦克风/AFE模块。
+**准确“小米同学”模型尚不可用**；不要把“小爱同学”技术基准当作目标词已经完成。
 
-**先阅读 [硬件、备份、恢复及 Windows 烧录说明](../docs/HARDWARE_H1.md)。云端构建/离屏渲染不代表实体设备通过。**
+| 构建 | 行为 |
+| --- | --- |
+| `audio`（默认） | 开机本地采集、AFE/NS/VAD；没有唤醒模型，不会输出唤醒成功 |
+| `benchmark` | 仅“小爱同学” WakeNet9 基准；检测后保持Listening并输出带模型身份的事件 |
 
-## 构建
+不接ASR/LLM/TTS、网络上传、触摸、记忆或舵机。主显示任务不做音频初始化/推理；FaceModel未改。首次开机即本地采集，可发 `wake off` 停止，不保存录音。
 
-使用官方示例对应的 **ESP-IDF v5.5.4**（含其工具链）、Python 3、Git。不要将 Arduino 或其他板的配置套用到此工程。在 ESP-IDF 终端执行：
+完整的**准确硬件、模型调查/费用/限制、Windows预编译ZIP烧录与验收**见 [HARDWARE_H2](../docs/HARDWARE_H2.md)。原厂备份/恢复仍见 [HARDWARE_H1](../docs/HARDWARE_H1.md)，不要覆盖用户已有备份、不要整片擦除。
+
+## 源码构建
+
+使用 **ESP-IDF v5.5.4** 终端、Python 3、Git。在firmware目录执行：
 
 ```sh
-cd firmware
-python scripts/prepare.py
-idf.py build
-idf.py size
+python scripts/build.py --profile audio --package
 ```
 
-`prepare.py` 从 GitHub 获取 LVGL **9.5.0** 并核对完整提交 SHA，拒绝错误版本及有修改的依赖。下载目录被忽略；不需要 Espressif 组件注册表。显示驱动及两版初始化表已随源码保留；来源、许可证与修改说明见 [NOTICE](components/nomi_panel/NOTICE.md)。工具链必须是 v5.5.4；不使用未锁定的组件解析。不要提交 sdkconfig、build 或设备备份。
+主动选择“小爱同学”技术基准：
 
-输出为 `build/desktop_nomi_h1.bin`、bootloader、partition-table、ELF、map 和 `flash_args`。推荐用同一构建目录的 `idf.py -p COMx flash`，不要把 app bin 单独写入 `0x0`。本工程固定 esp32s3、16 MB QIO Flash、8 MB 八线 PSRAM 80 MHz；USB Serial/JTAG 控制台。首次构建使用 sdkconfig.defaults，切换工程/配置后删除旧构建和本地 sdkconfig 再重建，避免继承别的板配置。
+```sh
+python scripts/build.py --profile benchmark --package
+```
 
-## 本地表情调试
+脚本自动prepare固定依赖、build/size、校验模型数量/词身份/准确写入偏移/ELF无网络与ASR/TTS运行入口，最后生成 `dist/desktop-nomi-h2-audio.zip` 或 `dist/desktop-nomi-h2-benchmark.zip`。**没有烧录步骤。**
+独立的build-audio/build-benchmark和sdkconfig.*.local避免继承H1配置；不要直接使用原H1 build目录烧H2。GitHub Actions对两种profile分别构建，并上传可下载ZIP。
 
-串口 115200，发送一行 ASCII 命令并回车：
+依赖版本、提交与基准模型SHA256锁在 [dependencies.lock.json](dependencies.lock.json)；prepare只从官方GitHub仓库获取并校验，拒绝错误提交或有本地修改的依赖。组件管理器保持关闭，不依赖注册表。ESP-SR manifest为2.0.1（tag为v2.0.0），ESP-DSP1.4.14、esp_codec_dev1.6.2、LVGL9.5.0；没有引入整个ESP-ADF运行框架。
+
+ZIP含app/bootloader/分区表/**model镜像**/准确flash_args、ELF/map、sdkconfig、manifest及许可证。`desktop_nomi_h2.bin`仅app，不能单独刷0x0；按H2说明刷完整生成文件集，不能遗漏model。
+
+## 串口
+
+115200，ASCII命令一行回车：
 
 | 命令 | 行为 |
 | --- | --- |
-| `idle` | 取消预览/眨眼，回待机 |
-| `blink` | 180 ms 闭合/张开，恢复原情绪/阶段 |
-| `happy` / `sad` / `curious` | 设置情绪，5 秒到期 |
-| `thinking` / `listening` / `speaking` | 设置对话阶段，5 秒到期；均为无声动画 |
-| `demo` | 按上述八种表情依次演示，各 3 秒，一轮后 idle |
-| `status` | 输出阶段/情绪枚举、可用内存和历史最低内存 |
+| `idle` / `blink` / `happy` / `sad` / `curious` / `thinking` / `listening` / `speaking` | 原H1预览、TTL/回退/自然眨眼保留；显式表情指令清除唤醒后的Listening保持 |
+| `demo` | 原八表情各3秒，两轮可重复；期间不被唤醒切屏 |
+| `status` | 表情与内存 + 音频/AFE/模型、栈、CPU累计runtime、最大帧间隔 |
+| `wake status` | 只看本地音频诊断，不中断表情 |
+| `wake off` | 异步停止采集，等待MIC_DISABLED；使旧唤醒事件失效 |
+| `wake on` / `wake reinit` | 异步重新初始化、恢复采集并重新布防；不会切换profile |
 
-情绪和阶段正交：阶段覆盖情绪显示但不延长情绪 TTL。可以先发 happy 再发 speaking 检查两者独立；阶段到期若情绪也已过期就恢复 idle。任意表情命令取消 demo；status 不打断。未知命令及超过 47 字符的输入行清空状态并回退 idle；空行忽略。单轮最多读取 32 字节，未完成的输入行不阻塞动画。不是设备网络协议或 HTTP API。
+未知/过长命令回退idle，部分输入不阻塞画面。phase/emotion数值含义与H1相同。唤醒事件每个会话只发一次，Listening保持到显式退出；要再次检测请wake on。demo中的事件被忽略，demo后如已触发需wake on再布防。无“串口伪造唤醒成功”命令。
 
-status 数值：phase 0/1/2/3 = idle/thinking/listening/speaking，emotion 0/1/2/3 = neutral/happy/sad/curious。它反映逻辑状态，眨眼不改变这两个字段。
-
-待机每 2.5–6 秒触发自然眨眼；状态切换使用 180 ms 平滑插值，20 ms 更新几何，LVGL 默认 33 ms 刷新。所有图形位于圆心 (180,180)、半径 160 的安全圆内。只创建固定数量对象，随后修改坐标/透明度，不反复创建图形或保存图片帧。两块 RGB565 内部 DMA 缓冲总计 **23,040 字节**，不使用全屏图片缓存。动画以单调时钟推进；主循环 5 ms FreeRTOS yield，DMA 等待用信号量让出 CPU；初始化阶段保留官方复位/面板指令所需等待。
-
-H1 暂不驱动 CST816 触摸；不用触摸也能完成全部表情验证。面板 ID 读取和两版表选择沿用官方流程；未知 ID 会日志提示并使用驱动默认表，须实机确认，不能把默认回退视为已匹配新硬件版本。
-
-## 自动化测试
-
-原生 C++17 状态机测试（无需硬件或 LVGL）：
-
-```sh
-cmake -S tests -B /tmp/nomi-model-tests
-cmake --build /tmp/nomi-model-tests
-ctest --test-dir /tmp/nomi-model-tests --output-on-failure
-```
-
-Windows 将 `/tmp/nomi-model-tests` 换为本机临时目录。安装 Git/LVGL 依赖后可运行实际 LVGL 离屏渲染与安全区域检查：
+## 自动化测试与实机边界
 
 ```sh
 python scripts/prepare.py
-cmake -S tests -B /tmp/nomi-render-tests -DNOMI_RENDER_TESTS=ON
-cmake --build /tmp/nomi-render-tests
-ctest --test-dir /tmp/nomi-render-tests --output-on-failure
+cmake -S tests -B build-native -DNOMI_RENDER_TESTS=ON
+cmake --build build-native
+ctest --test-dir build-native --output-on-failure
+python -m unittest discover -s tests -p 'test_*.py' -v
 ```
 
-渲染测试在测试构建目录生成八张 PPM；它验证矢量渲染和像素边界，不模拟 SPI/PSRAM/实体屏幕。构建结果及实机待测项见 [HANDOFF](../docs/HANDOFF.md)。
+实机30分钟观察辅助工具（先关闭其他串口终端）：
+
+```sh
+python scripts/soak.py --port COM3 --minutes 30
+```
+
+原生状态/实际LVGL渲染/PCM和唤醒隔离测试、构建与打包审计可以在云端执行；它们不等于真实麦克风、AFE库运行、唤醒准确率或稳定性通过。分层实机验收、CPU/栈/内存读法与当前结果见HARDWARE_H2和 [HANDOFF](../docs/HANDOFF.md)。
+
+H1用户实测已通过Windows备份/编译/烧录、眨眼及八表情两轮demo；H2新音频功能尚待用户实测。本阶段不声称“小米同学”已经能唤醒。

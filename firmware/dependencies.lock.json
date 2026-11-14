@@ -1,0 +1,59 @@
+{
+  "schema": 1,
+  "dependencies": [
+    {
+      "name": "lvgl",
+      "version": "9.5.0",
+      "url": "https://github.com/lvgl/lvgl.git",
+      "ref": "v9.5.0",
+      "sha": "85aa60d18b3d5e5588d7b247abf90198f07c8a63",
+      "path": "components/lvgl"
+    },
+    {
+      "name": "esp-sr",
+      "version": "2.0.1 (upstream tag v2.0.0)",
+      "url": "https://github.com/espressif/esp-sr.git",
+      "ref": "v2.0.0",
+      "sha": "1c0503e7e2dc5e1ecb2fd3da0a5d7e51e3574842",
+      "path": ".deps/esp-sr",
+      "sparse": [
+        "include/esp32s3",
+        "src",
+        "lib/esp32s3",
+        "esp-tts/esp_tts_chinese/esp32s3",
+        "esp-tts/esp_tts_chinese/include",
+        "model/wakenet_model/wn9_xiaoaitongxue"
+      ]
+    },
+    {
+      "name": "esp-dsp",
+      "version": "1.4.14",
+      "url": "https://github.com/espressif/esp-dsp.git",
+      "ref": "v1.4.14",
+      "sha": "948115bdad08c110a467cb4f90b48ecefd9fe473",
+      "path": ".deps/espressif__esp-dsp"
+    },
+    {
+      "name": "esp_codec_dev",
+      "version": "1.6.2",
+      "url": "https://github.com/espressif/esp-adf.git",
+      "ref": "ce72dd6ab30923c4a7addb00eb896cf0f7722d47",
+      "sha": "ce72dd6ab30923c4a7addb00eb896cf0f7722d47",
+      "path": ".deps/esp-adf",
+      "sparse": [
+        "components/esp_codec_dev"
+      ]
+    }
+  ],
+  "target_phrase": "小米同学",
+  "target_model_available": false,
+  "benchmark": {
+    "phrase": "小爱同学",
+    "model": "wn9_xiaoaitongxue",
+    "files": {
+      "wn9_data": "437d0211f2bfad8c77f677ce9896bbb754efb6cf783556264614ec3adeb67f11",
+      "wn9_index": "50c9f2c4b66adfa57f32fd76e1c951c4f50d7eccebf22669a5d4bb3a4bec6f91",
+      "_MODEL_INFO_": "0adda5f3f950d6033f15e822610a50d454a7210a4449b5b3d2f06639ef6998da"
+    }
+  }
+}

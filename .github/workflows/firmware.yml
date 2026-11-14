@@ -1,12 +1,12 @@
-name: H1 firmware checks
+name: H2 local audio firmware checks
 
 on:
   push:
-    branches: [main]
-    paths: ["firmware/**", ".github/workflows/firmware.yml"]
+    branches: [main, feat/h2-local-wakeword]
+    paths: ["firmware/**", "docs/HARDWARE_H*.md", ".github/workflows/firmware.yml"]
   pull_request:
     branches: [main]
-    paths: ["firmware/**", ".github/workflows/firmware.yml"]
+    paths: ["firmware/**", "docs/HARDWARE_H*.md", ".github/workflows/firmware.yml"]
   workflow_dispatch:
 
 permissions:
@@ -17,15 +17,21 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Fetch verified LVGL revision
+      - name: Fetch verified source and benchmark model
         run: python3 firmware/scripts/prepare.py
-      - name: Build model and actual LVGL renderer
+      - name: Check wake policy, PCM and real LVGL rendering
         run: |
           cmake -S firmware/tests -B /tmp/nomi-tests -DNOMI_RENDER_TESTS=ON
           cmake --build /tmp/nomi-tests -j 4
           ctest --test-dir /tmp/nomi-tests --output-on-failure
+      - name: Check Python tools
+        run: python3 -m unittest discover -s firmware/tests -p 'test_*.py' -v
   esp32s3:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        profile: [audio, benchmark]
     container: espressif/idf:v5.5.4@sha256:116f0526dfc87e764785370e59b88822e02cf4f9e1edd953cad5ed2d02672023
     defaults:
       run:
@@ -33,25 +39,14 @@ jobs:
         working-directory: firmware
     steps:
       - uses: actions/checkout@v4
-      - name: Compile ESP32-S3 firmware
+      - name: Compile and audit selected profile
+        env:
+          NOMI_BUILD_PROFILE: ${{ matrix.profile }}
         run: |
           . /opt/esp/idf/export.sh
-          python scripts/prepare.py
-          idf.py build
-          idf.py size
+          python scripts/build.py --profile "$NOMI_BUILD_PROFILE" --package
       - uses: actions/upload-artifact@v4
         with:
-          name: desktop-nomi-h1-build
-          path: |
-            firmware/build/desktop_nomi_h1.bin
-            firmware/build/desktop_nomi_h1.elf
-            firmware/build/desktop_nomi_h1.map
-            firmware/build/bootloader/bootloader.bin
-            firmware/build/partition_table/partition-table.bin
-            firmware/build/flash_args
-            firmware/build/flasher_args.json
-            firmware/sdkconfig
-            firmware/components/nomi_panel/LICENSE
-            firmware/components/nomi_panel/NOTICE.md
-            firmware/components/lvgl/LICENCE.txt
-            firmware/components/lvgl/COPYRIGHTS.md
+          name: desktop-nomi-h2-${{ matrix.profile }}
+          if-no-files-found: error
+          path: firmware/dist/desktop-nomi-h2-${{ matrix.profile }}.zip

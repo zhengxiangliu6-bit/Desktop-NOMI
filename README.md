@@ -4,7 +4,7 @@
 
 ## 当前状态
 
-另行开展 **硬件 H1：ESP32-S3 圆屏表情固件**，独立于前后端，目标仅为 Waveshare ESP32-S3-Touch-LCD-1.85B。代码、构建与调试见 [firmware](firmware/README.md)，板型依据、Windows 整片备份/恢复/烧录和实机待测清单见 [硬件说明](docs/HARDWARE_H1.md)。本阶段没有真实 AI、音频或舵机，实体硬件尚未验证；网页 Mock 与后端安全机制保持原样。
+硬件 H1 已由用户实机验证Windows备份/编译/烧录、眨眼及八表情demo；当前另行开展 **H2 本地音频/唤醒接入**，目标仅为 Waveshare ESP32-S3-Touch-LCD-1.85B。**“小米同学”专用模型尚不可用**，默认构建只验证采集/AFE，另提供明确标记的“小爱同学”技术基准。H2新音频尚待实体测试，不接ASR/LLM/TTS/触摸/记忆/舵机。代码与构建见 [firmware](firmware/README.md)，步骤和限制见 [H2说明](docs/HARDWARE_H2.md)，原厂备份恢复入口见 [H1说明](docs/HARDWARE_H1.md)。网页Mock和后端Key安全机制不变。
 
 当前为 **阶段 2B：前后端文字对话集成**（阶段 1 外观与 Mock 保留）。`frontend/` 已可运行：中央 Aora 圆形角色、响应式聊天外壳、纯本地 Mock 回复、阶段/情绪独立管理、可折叠调试与错误恢复。界面清晰标识前端 Mock / API / 后端 Mock，尚未执行真实模型验证或实现语音。阶段 2A 提供 FastAPI 服务，阶段 2B 已增加显式开发 API 模式，经同源代理对接结构化回复；默认和所有生产构建仍是前端 Mock。真实账号验证未执行，无持久化或硬件控制。
 

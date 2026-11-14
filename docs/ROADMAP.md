@@ -1,5 +1,9 @@
 # V0 路线图
 
+## 独立硬件阶段 H2（本次授权）
+
+在用户已实测H1八表情的基础上加入本地音频、AFE与独立唤醒控制器。默认audio与“小爱同学”benchmark分开；**“小米同学”准确模型不可用，因此目标唤醒词未交付**，不能以音频/框架/其他词验证代替。新音频待实机验收，不提前接ASR/LLM/TTS/触摸/记忆/舵机。交付固定依赖、双profile云端构建与ZIP、Windows说明及四层验收；按用户要求独立分支推送，**不创建PR、不合并main**。详见 [HARDWARE_H2](HARDWARE_H2.md)。
+
 ## 独立硬件阶段 H1（本次授权）
 
 目标为 Waveshare ESP32-S3-Touch-LCD-1.85B 的独立开机表情固件，包含 idle/blink/happy/sad/curious/thinking/listening/speaking、非阻塞状态切换、TTL 回退、串口测试、Windows 备份/恢复/烧录说明。仅此阶段获得实体硬件软件开发授权；不接 AI、语音、记忆、舵机或前后端设备协议。代码与云端验证见 [firmware](../firmware/README.md) / [HANDOFF](HANDOFF.md)，实体设备验收按 [HARDWARE_H1](HARDWARE_H1.md) 执行，当前未验证。下方 V0.4/V0.5 等不会因此提前完成。
