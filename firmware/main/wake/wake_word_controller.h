@@ -2,6 +2,8 @@
 #include <atomic>
 #include "audio_input.h"
 #include "wake_logic.h"
+#include "voice_session.h"
+#include "command_recognizer.h"
 #include "esp_afe_sr_models.h"
 #include "model_path.h"
 #include "freertos/event_groups.h"
@@ -15,6 +17,8 @@ public:
     void enable(bool enabled); // asynchronous; invalidates old queued events immediately
     uint32_t epoch() const { return epoch_.load(); }
     bool poll(WakeEvent &event);
+    bool poll_voice(VoiceEvent &event);
+    WakeState state() const { return state_.load(); }
     bool faulted() const { return failed_.load(); }
     void status() const;
     static const char *profile();
@@ -29,6 +33,10 @@ private:
     void fault(const char *stage);
     AudioInput audio_;
     QueueHandle_t requests_ = nullptr, events_ = nullptr;
+    QueueHandle_t voice_events_ = nullptr;
+#if CONFIG_NOMI_VOICE_COMMANDS
+    CommandRecognizer recognizer_;
+#endif
     EventGroupHandle_t sync_ = nullptr;
     TaskHandle_t capture_task_ = nullptr, fetch_task_ = nullptr;
     esp_afe_sr_iface_t *afe_ = nullptr;

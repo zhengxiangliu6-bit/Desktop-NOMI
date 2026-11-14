@@ -2,7 +2,7 @@ name: H2 local audio firmware checks
 
 on:
   push:
-    branches: [main, feat/h2-local-wakeword]
+    branches: [main, feat/h2-local-wakeword, feat/h2-offline-voice-commands]
     paths: ["firmware/**", "docs/HARDWARE_H*.md", ".github/workflows/firmware.yml"]
   pull_request:
     branches: [main]
@@ -31,7 +31,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        profile: [audio, benchmark]
+        profile: [audio, benchmark, commands]
     container: espressif/idf:v5.5.4@sha256:116f0526dfc87e764785370e59b88822e02cf4f9e1edd953cad5ed2d02672023
     defaults:
       run:

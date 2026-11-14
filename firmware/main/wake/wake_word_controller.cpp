@@ -12,7 +12,9 @@ namespace nomi {
 namespace { const char *TAG = "wake"; constexpr EventBits_t FETCH_DONE = BIT0; }
 const char *WakeWordController::profile()
 {
-#if CONFIG_NOMI_WAKE_BENCHMARK
+#if CONFIG_NOMI_VOICE_COMMANDS
+    return "OFFLINE_COMMANDS_MultiNet7_xiaomi_configured_NOT_WakeNet";
+#elif CONFIG_NOMI_WAKE_BENCHMARK
     return "BENCHMARK_xiaoai_tongxue_NOT_xiaomi";
 #else
     return "AUDIO_AFE_ONLY_xiaomi_model_unavailable";
@@ -23,17 +25,19 @@ bool WakeWordController::start()
     if (capture_task_) return false;
     requests_ = xQueueCreate(1, sizeof(Request));
     events_ = xQueueCreate(4, sizeof(WakeEvent));
+    voice_events_ = xQueueCreate(8, sizeof(VoiceEvent));
     sync_ = xEventGroupCreate();
-    if (!requests_ || !events_ || !sync_) goto failed;
+    if (!requests_ || !events_ || !voice_events_ || !sync_) goto failed;
     if (xTaskCreatePinnedToCore(fetch_entry, "wake_fetch", 8192, this, 3, &fetch_task_, 1) != pdPASS) goto failed;
     if (xTaskCreatePinnedToCore(capture_entry, "wake_capture", 8192, this, 4, &capture_task_, 0) != pdPASS) goto failed;
-    ESP_LOGW(TAG, "profile=%s; TARGET_MODEL_UNAVAILABLE phrase=小米同学; local capture only, no network", profile());
+    ESP_LOGW(TAG, "profile=%s; local audio only, no network; see VOICE_READY for active command recognition", profile());
     enable(true);
     return true;
 failed:
     if (fetch_task_) { vTaskDelete(fetch_task_); fetch_task_ = nullptr; }
     if (requests_) { vQueueDelete(requests_); requests_ = nullptr; }
     if (events_) { vQueueDelete(events_); events_ = nullptr; }
+    if (voice_events_) { vQueueDelete(voice_events_); voice_events_ = nullptr; }
     if (sync_) { vEventGroupDelete(sync_); sync_ = nullptr; }
     ESP_LOGE(TAG, "Task/queue allocation failed; face remains available");
     return false;
@@ -48,6 +52,10 @@ void WakeWordController::enable(bool enabled)
 bool WakeWordController::poll(WakeEvent &event)
 {
     return events_ && xQueueReceive(events_, &event, 0) == pdTRUE;
+}
+bool WakeWordController::poll_voice(VoiceEvent &event)
+{
+    return voice_events_ && xQueueReceive(voice_events_, &event, 0) == pdTRUE;
 }
 void WakeWordController::fault(const char *stage)
 {
@@ -73,11 +81,18 @@ bool WakeWordController::initialize()
     ESP_LOGW(TAG, "BENCHMARK_ONLY model=%s phrase=%s; NOT 小米同学", model_name, words);
     std::free(words);
 #endif
+#if CONFIG_NOMI_VOICE_COMMANDS
+    models_ = esp_srmodel_init("model");
+    if (!recognizer_.open(models_)) { fault("MultiNet model/commands initialization"); return false; }
+#endif
     auto *cfg = afe_config_init("M", models_, AFE_TYPE_SR, AFE_MODE_LOW_COST);
     if (!cfg) { fault("AFE config allocation"); return false; }
     cfg->aec_init = false; cfg->se_init = false;
     cfg->ns_init = true; cfg->vad_init = true;
-    cfg->vad_model_name = nullptr; // WebRTC VAD; no VADNet model or voice recognition.
+#if CONFIG_NOMI_VOICE_COMMANDS
+    cfg->ns_init = false; // Official SR recommendation: avoid distortion before command recognition.
+#endif
+    cfg->vad_model_name = nullptr; // WebRTC VAD; no VADNet model. Command recognition is separate.
     cfg->wakenet_init = model_name != nullptr;
     cfg->wakenet_model_name = model_name; cfg->wakenet_model_name_2 = nullptr;
     cfg->agc_init = false; cfg->debug_init = false;
@@ -124,6 +139,9 @@ bool WakeWordController::cleanup()
     fetch_started_ = false;
     if (afe_data_) { afe_->destroy(afe_data_); afe_data_ = nullptr; }
     afe_ = nullptr;
+#if CONFIG_NOMI_VOICE_COMMANDS
+    recognizer_.close();
+#endif
     if (models_) { esp_srmodel_deinit(models_); models_ = nullptr; }
     heap_caps_free(stereo_); heap_caps_free(mono_); stereo_ = mono_ = nullptr;
     return true;
@@ -186,6 +204,11 @@ void WakeWordController::fetch_loop()
             }
             failures = 0;
             if (result->data_size <= 0 || result->data_size % 2 || result->data_size > 4096) { fault("AFE output format"); continue; }
+#if CONFIG_NOMI_VOICE_COMMANDS
+            if (!recognizer_.consume(result->data, size_t(result->data_size)/sizeof(int16_t), voice_events_, session_epoch_)) {
+                ++dropped_; fault("MultiNet inference/result queue"); continue;
+            }
+#endif
             ++fetched_;
             if (result->vad_state == VAD_SPEECH) ++vad_speech_;
 #if CONFIG_NOMI_WAKE_BENCHMARK
@@ -211,6 +234,9 @@ void WakeWordController::status() const
     ESP_LOGI(TAG, "MIC1 peak_hold=%lu rms=%lu clip=%lu; MIC2 peak_hold=%lu rms=%lu clip=%lu (levels only, no PCM logs/files)",
              (unsigned long)peak_[0].load(), (unsigned long)rms_[0].load(), (unsigned long)clipped_[0].load(),
              (unsigned long)peak_[1].load(), (unsigned long)rms_[1].load(), (unsigned long)clipped_[1].load());
+#if CONFIG_NOMI_VOICE_COMMANDS
+    ESP_LOGI(TAG, "MULTINET frames=%lu wake=%s", (unsigned long)recognizer_.frames(), CONFIG_NOMI_VOICE_WAKE_LABEL);
+#endif
     // Snapshot includes AFE's own tasks and both idle tasks, not just our two workers.
     static TaskStatus_t snapshot[24];
     configRUN_TIME_COUNTER_TYPE total = 0;

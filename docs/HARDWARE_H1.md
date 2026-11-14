@@ -1,5 +1,7 @@
 # H1：ESP32-S3 圆屏表情固件
 
+> 后续独立本地语音激活/表情指令（0.3.0）见 [HARDWARE_VOICE](HARDWARE_VOICE.md)；H1表情和原厂备份恢复方案保留。
+
 状态：软件实现与云端验证记录见 [HANDOFF](HANDOFF.md)。**本会话用户已在Windows ESP-IDF 5.5.4完成双份16MB备份与verify_flash、编译和烧录，观察到眨眼与八表情两轮demo正常。** 这是用户提供的实机证据，助手没有远程连接设备；30分钟稳定性与原厂实际恢复仍待验证。本阶段只有独立表情固件，现有 Pages Mock 与 API Key 安全机制不变。
 
 ## 已核对的官方依据

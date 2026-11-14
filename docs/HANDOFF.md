@@ -1,3 +1,33 @@
+# 0.3.0 独立 ESP32 语音指令交接
+
+本次用户将目标调整为“必须脱离电脑，仅在ESP32上进行语音激活和表情指令”。新增本地有限中文指令识别，按最新需求扩展此前H2的“不接ASR”限制；不接自由转录、LLM、TTS、网络、触摸、记忆或舵机。**代码/构建交付不等于真实语音验收通过。**
+
+## 方案与当前状态
+
+- 从干净 `feat/h2-local-wakeword` / `0e9a58f` 创建独立 `feat/h2-offline-voice-commands`；保留原分支和原厂备份，不创建PR、不合并/推送main。
+- 用户提供的0.2.1日志确认约19秒内state=2，blocks 586→2506、fetched 183→783，无超时/溢出/丢弃，RAM/PSRAM余量一致；VAD计数增长，双麦各累计5个削波点。支持“短时采音/AFE处理正常”的结论，不证明30分钟稳定性或词语识别。
+- 官方固定版本MultiNet7允许配置中文拼音指令。使用 `mn7_cn`（`MN7_v1_chinese_8_0.9_0.90`）和`fst`，SHA256加入依赖锁及prepare校验；所有原组件版本不变。
+- 新 `commands` profile连续运行MultiNet，应用层仅接受ID1“小米同学”激活；进入Listening/20秒窗口后，2–8表情、9/10结束待机、11原demo。普通指令续期，表现5秒后回Listening；超时待机；手动串口优先、demo隔离、epoch/时效/阈值/去重门控。**不是专用WakeNet唤醒，也不是任意语句识别。** 待机仍持续推理，功耗与误激活需测。
+- 名称通过Kconfig label+无声调拼音配置；仅改label不会改变识别。硬件引脚、Codec、16kHz双麦采样、FaceModel和8种表达未改；commands关闭NS，保持VAD和50单位AFE缓存。MultiNet只在fetch任务推理，查询并重组模型chunk；UI独占表情与会话。
+- 底部状态点仅commands显示：橙初始化/demo、绿就绪待机、蓝已激活、灰关闭、红故障。可脱离日志观察激活及表情反馈。
+- model分区原地址0x410000扩至4MB，app仍0x10000/4MB，NVS保持；必须用完整四文件ZIP，不能只刷app，不整片擦除。
+
+## 修改文件
+
+- 新增：`firmware/main/voice/voice_session.h`、`command_recognizer.h/.cpp`、`firmware/sdkconfig.commands`、`firmware/tests/voice_session_test.cpp`、`docs/HARDWARE_VOICE.md`。
+- 调整：`firmware/main/main.cpp`、`main/wake/wake_word_controller.h/.cpp`、`main/CMakeLists.txt`、`main/Kconfig.projbuild`、`firmware/CMakeLists.txt`、`partitions.csv`、`dependencies.lock.json`。
+- 工具/回归：`firmware/scripts/prepare.py`、`build.py`、`soak.py`、`tests/CMakeLists.txt`、`tests/test_build_tools.py`、`.github/workflows/firmware.yml`（三个profile分别编译打包）。
+- 文档：根README、firmware/README、ARCHITECTURE、API_CONTRACT、ROADMAP、HARDWARE_H1/H2、本交接；旧H2记录以下保留作为历史，当前策略以本节及HARDWARE_VOICE为准。前后端/Pages/密钥机制未变。
+
+## 已执行检查与限制
+
+- IDF5.5.4目标构建：commands、audio、benchmark均编译/模型集合/链接入口审计通过。初次commands app1,134,944字节，模型2,681,351字节，均在4MB分区内；最终尺寸以构建产物/manifest为准，静态编译不测动态堆或真实CPU。
+- 原生CTest 4/4：原FaceModel、实际LVGL八表情渲染、WakeLatch/PCM、本次VoiceSession（激活/待机门控、阈值、重复、demo、旧epoch、过期/未来事件、睡眠、续期和超时）。Python构建审计5/5：模型身份/集合、profile、偏移、非法运行入口、缺失MultiNet等拒绝路径。actionlint通过，diff空白检查通过。
+- Windows刷写、模型真正初始化、准确“小米同学”激活、表情指令识别、误识别/漏识别、30分钟稳定性、断开电脑独立供电均**待用户实测**。当前没有实体板可用于助手验证；不将自动测试的合成事件算语音识别成功。
+- 交付ZIP `desktop-nomi-h2-commands.zip`，步骤及正负样本验收见 [HARDWARE_VOICE](HARDWARE_VOICE.md)。首次先确认绿点，然后说“小米同学”观察蓝点/Listening，再说“开心一点”；每次看实际动作，而非仅看VAD电平。
+
+---
+
 # H2 本地音频与唤醒交接
 
 更新：2026-11-15（Asia/Shanghai）。**目标“小米同学”准确模型未获得，不能宣称目标词唤醒完成。** 本阶段交付本地采集/AFE与单独“小爱同学”技术基准代码、双profile固件ZIP；H2首次用户实机音频测试已发现AFE故障；0.2.1修复构建待实机复测，真实唤醒仍未验证。

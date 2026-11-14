@@ -1,5 +1,7 @@
 # 技术架构（V0 目标设计）
 
+> 新增独立ESP32离线语音指令profile（0.3.0），见 [语音硬件方案](HARDWARE_VOICE.md)：MultiNet7连续中文词表识别“小米同学”激活、20秒会话及表情指令；不依赖电脑/网络，不改Web API或API Key机制。专用WakeNet模型仍未获得，新增语音效果待实机验收。
+
 ## 独立硬件 H2
 
 在已验证H1的分支基础上，新增 `nomi_audio`（该板ES7210双麦+静音ES8311初始化）与独立 `WakeWordController`。capture任务独占音频资源、读取16kHz stereo PCM16、提取MIC1并feed AFE；fetch任务消费AFE/NS/VAD/WakeNet输出；显示任务只处理有界事件和LVGL。FaceModel未改，Listening保持由显示协调层负责。队列/epoch隔离启停与迟到事件，停机等待fetch退出本轮后再释放AFE资源，故障不关闭原表情功能。

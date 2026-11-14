@@ -27,7 +27,7 @@ class BuildAuditTest(unittest.TestCase):
     def write(self, count=0, model=b"wn9_xiaoaitongxue"):
         (self.root/"config/sdkconfig.json").write_text(json.dumps(self.config))
         (self.root/"flasher_args.json").write_text(json.dumps(self.args))
-        (self.root/"srmodels/srmodels.bin").write_bytes(struct.pack("<I", count) + model.ljust(32,b"\0"))
+        (self.root/"srmodels/srmodels.bin").write_bytes(struct.pack("<I", count) + (model.ljust(32,b"\0") + struct.pack("<I", 0) if count else b""))
 
     def audit(self, profile="audio", symbols=""):
         with patch.object(build_tool.shutil,"which",return_value="fake-nm"), patch.object(build_tool.subprocess,"check_output",return_value=symbols):
@@ -45,6 +45,18 @@ class BuildAuditTest(unittest.TestCase):
         with self.assertRaises(ValueError): self.audit("benchmark")
         self.write(0)
         with self.assertRaises(ValueError): self.audit("benchmark")
+
+    def test_commands_requires_exact_pair_and_recognizer(self):
+        self.config["NOMI_VOICE_COMMANDS"] = True
+        self.write()
+        def record(name): return name.ljust(32,b"\0") + struct.pack("<I",0)
+        blob = struct.pack("<I",2) + record(b"fst") + record(b"mn7_cn")
+        (self.root/"srmodels/srmodels.bin").write_bytes(blob)
+        self.audit("commands", "esp_mn_handle_from_name")
+        with self.assertRaises(ValueError): self.audit("commands")
+        with self.assertRaises(ValueError): self.audit("commands", "esp_mn_handle_from_name esp_wifi_init")
+        (self.root/"srmodels/srmodels.bin").write_bytes(blob[:-1])
+        with self.assertRaises(ValueError): self.audit("commands", "esp_mn_handle_from_name")
 
     def test_wrong_profile_and_offsets(self):
         with self.assertRaises(ValueError): self.audit("benchmark")

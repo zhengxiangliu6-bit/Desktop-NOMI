@@ -1,5 +1,7 @@
 # H2：本地音频与唤醒词接入
 
+> 后续需求已扩展为独立ESP32语音指令，见 [HARDWARE_VOICE](HARDWARE_VOICE.md)。本文的“无ASR/模型未获得”描述针对原audio/benchmark阶段；commands使用通用MultiNet7词表匹配“小米同学”，不是专用WakeNet。0.3.0模型分区扩大为4MB。
+
 **「小米同学」专用模型不可用，当前不能宣称已实现这个唤醒词。**
 本阶段交付音频/AFE 接入及一个明确标记的「小爱同学」基准选项，不接 ASR、LLM、TTS、触摸、记忆、舵机或网络。
 音频与新唤醒功能尚未连接实体板验证；H1 表情的用户实机反馈见 [H1 文档](HARDWARE_H1.md)。

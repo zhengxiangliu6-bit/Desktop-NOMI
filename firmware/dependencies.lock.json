@@ -22,7 +22,9 @@
         "lib/esp32s3",
         "esp-tts/esp_tts_chinese/esp32s3",
         "esp-tts/esp_tts_chinese/include",
-        "model/wakenet_model/wn9_xiaoaitongxue"
+        "model/wakenet_model/wn9_xiaoaitongxue",
+        "model/multinet_model/mn7_cn",
+        "model/multinet_model/fst"
       ]
     },
     {
@@ -46,7 +48,6 @@
     }
   ],
   "target_phrase": "小米同学",
-  "target_model_available": false,
   "benchmark": {
     "phrase": "小爱同学",
     "model": "wn9_xiaoaitongxue",
@@ -55,5 +56,21 @@
       "wn9_index": "50c9f2c4b66adfa57f32fd76e1c951c4f50d7eccebf22669a5d4bb3a4bec6f91",
       "_MODEL_INFO_": "0adda5f3f950d6033f15e822610a50d454a7210a4449b5b3d2f06639ef6998da"
     }
-  }
+  },
+  "commands": {
+    "engine": "MultiNet7",
+    "model": "mn7_cn",
+    "activation_phrase": "小米同学",
+    "activation_pinyin": "xiao mi tong xue",
+    "dedicated_wakenet_model": false,
+    "files": {
+      "fst/commands_cn.txt": "a516f97ec1a826c7cd8396156857169aa3b73df122596f7854d90b23a15f2252",
+      "fst/commands_en.txt": "517b7df8f3471105ae638cd910f4d1c85f9ba7eab9e960aad2c6ca82713ad47e",
+      "mn7_cn/_MODEL_INFO_": "251cee555d800867c5279cb5c88ef2cca10d0d250a17baf48f87830d502244aa",
+      "mn7_cn/mn7_data": "21bf13f3dc4792bdac9a9d6d6d3e69c782ded4071bba24df3da98ee14151120f",
+      "mn7_cn/mn7_index": "8a018cc23671dcee23a80ff343c37e87f3b893f144198a2dba09bcb9f745af75",
+      "mn7_cn/vocab": "7505578a7543455554a3d0a45cad7e2fd2f258097ba3b5f381d18d20d3f7ed51"
+    }
+  },
+  "dedicated_wakenet_model_available": false
 }

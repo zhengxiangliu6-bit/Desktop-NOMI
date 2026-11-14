@@ -24,7 +24,7 @@ with serial.Serial(a.port, 115200, timeout=0.2) as s:
         line = s.readline(2048).decode("utf-8", errors="replace").strip()
         if not line:
             continue
-        if any(word in line for word in ("nomi:", "wake:", "nomi_audio:", "Guru Meditation", "rst:")):
+        if any(word in line for word in ("nomi:", "wake:", "nomi_audio:", "voice:", "Guru Meditation", "rst:")):
             print(line, flush=True)
         m = re.search(r"uptime_ms=(\d+)", line)
         if m:

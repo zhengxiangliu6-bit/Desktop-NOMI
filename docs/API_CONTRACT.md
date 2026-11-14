@@ -1,5 +1,7 @@
 # 后端 API 契约：阶段 2A / 2B 消费者
 
+> 新增独立ESP32离线语音指令profile（0.3.0），见 [语音硬件方案](HARDWARE_VOICE.md)：MultiNet7连续中文词表识别“小米同学”激活、20秒会话及表情指令；不依赖电脑/网络，不改Web API或API Key机制。专用WakeNet模型仍未获得，新增语音效果待实机验收。
+
 状态：已实现并以 pytest / 本地 HTTP 验证，真实模型账号验证未执行。阶段 2B 在显式 api 开发模式中经同源代理接入；默认前端与 Pages 仍为纯 Mock。基础路径 `/api/v0`，UTF-8 JSON，字段 snake_case。
 
 旧的全栈设计保留为 [历史规划](design/API_V0_PLANNED.md)，其中 `/sessions`、turn_id、SQLite、语音等均未实现。2A 新增独立 `/chat`，不将旧草案中的 Emotion 对象 / TurnResult 冒充当前响应；2B 应以本文与当前 OpenAPI 为入口。
@@ -114,3 +116,9 @@ retryable 仅表示可由用户选择重试，不等于应该自动重试；认�
 错误 body 的 message 仅用于服务端契约，前端不直接显示它，而按经过检查的 code/status 使用固定安全文案。网络错误、客户端等待超时和非 JSON/非法响应为客户端本地错误，不是新增后端状态码；未知提交结果和取消都不保证服务端停止，也不自动重试。
 
 Pydantic schema 快照为 contracts/chat-v0.json，由 backend/scripts/export_contract.py 生成，后端与前端测试分别检查与实际模型和消费类型一致。字段与路由没有变更，不使用归档中的 sessions/turn_id。具体开发边界见 [INTEGRATION](INTEGRATION.md)。
+
+## ESP32 本地有限指令事件（0.3.0）
+
+不增加HTTP接口。fetch worker仅传递内部`VoiceEvent {epoch, id, probability, at_ms}`；主UI检查当前epoch、1500ms事件时效、阈值>=0.90、demo及激活窗口。id=1激活，2–8表情，9/10待机结束会话，11表情demo；原有串口ASCII协议保留。
+
+串口可观察事件：`WAKE_WORD_DETECTED source=multinet_command`仅在应用接受激活时输出；`VOICE_COMMAND_ACCEPTED id=... action=... probability=...`仅在应用接受表情/demo时输出；`VOICE_SLEEP`/`VOICE_SESSION_TIMEOUT`结束会话；`VOICE_IGNORED`说明候选被门控拒绝。事件不包含录音或自由转录。内部识别结果及人工串口命令不能作为真实语音识别验收的替代。

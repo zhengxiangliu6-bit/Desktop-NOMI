@@ -27,6 +27,8 @@ for dep in LOCK["dependencies"]:
         else:
             git("-C", destination, "fetch", "--depth", "1", "origin", dep["ref"])
         git("-C", destination, "checkout", "--detach", "FETCH_HEAD")
+    if dep.get("sparse"):
+        git("-C", destination, "sparse-checkout", "set", *dep["sparse"])
     actual = git("-C", destination, "rev-parse", "HEAD")
     if actual != dep["sha"]:
         raise SystemExit(f"{dep['name']}: revision mismatch: {actual}")
@@ -38,4 +40,10 @@ for name, expected in LOCK["benchmark"]["files"].items():
     path = ROOT / ".deps/esp-sr/model/wakenet_model" / LOCK["benchmark"]["model"] / name
     if hashlib.sha256(path.read_bytes()).hexdigest() != expected:
         raise SystemExit(f"Benchmark model hash mismatch: {name}")
-print("Benchmark is Xiaoai Tongxue ONLY; Xiaomi Tongxue model is unavailable.")
+print("WakeNet benchmark is Xiaoai Tongxue ONLY; dedicated Xiaomi Tongxue WakeNet model is unavailable.")
+
+for name, expected in LOCK["commands"]["files"].items():
+    path = ROOT / ".deps/esp-sr/model/multinet_model" / name
+    if hashlib.sha256(path.read_bytes()).hexdigest() != expected:
+        raise SystemExit(f"Command model hash mismatch: {name}")
+print("Verified MultiNet7 command model; configurable phrase, not a dedicated WakeNet model.")

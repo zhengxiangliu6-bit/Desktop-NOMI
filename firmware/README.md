@@ -1,4 +1,16 @@
-# Desktop-NOMI H2 固件
+# Desktop-NOMI 本地语音指令固件
+
+当前新增 **0.3.0 commands**：在ESP32-S3上识别“小米同学”激活和有限中文表情指令，不依赖电脑、网络或云服务。实现是MultiNet7连续词表匹配，不是专用WakeNet模型，真实效果待实机验收。
+
+完整操作/自定义名称/Windows烧录/正负样本验收见 [HARDWARE_VOICE](../docs/HARDWARE_VOICE.md)。
+
+```sh
+python scripts/build.py --profile commands --package
+```
+
+说“小米同学”看到Listening后，再说“开心一点”“难过一点”“眨一下眼”等；“休息一下”或20秒超时回待机。不做自由对话/LLM/TTS，不保存录音、不上传音频。原H2两种诊断profile保留如下。
+
+## H2 诊断版本（历史方案）
 
 目标仅为 **Waveshare ESP32-S3-Touch-LCD-1.85B，360×360**。保留H1八种表情与串口demo，加入本地麦克风/AFE模块。
 **准确“小米同学”模型尚不可用**；不要把“小爱同学”技术基准当作目标词已经完成。

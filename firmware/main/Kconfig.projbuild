@@ -1,11 +1,22 @@
 menu "Desktop-NOMI H2 local audio"
 choice NOMI_WAKE_PROFILE
-    prompt "Wake-word profile (no Xiaomi Tongxue model is available)"
+    prompt "Local audio/recognition profile"
     default NOMI_WAKE_AUDIO_ONLY
     config NOMI_WAKE_AUDIO_ONLY
         bool "Audio + AFE only; Xiaomi Tongxue unavailable"
     config NOMI_WAKE_BENCHMARK
         bool "BENCHMARK ONLY: Xiaoai Tongxue (not Xiaomi Tongxue)"
         select SR_WN_WN9_XIAOAITONGXUE
+    config NOMI_VOICE_COMMANDS
+        bool "Offline Chinese commands with configurable activation phrase (MultiNet7)"
+        select SR_MN_CN_MULTINET7_QUANT
 endchoice
+config NOMI_VOICE_WAKE_LABEL
+    string "Activation phrase display label"
+    depends on NOMI_VOICE_COMMANDS
+    default "小米同学"
+config NOMI_VOICE_WAKE_PINYIN
+    string "Activation phrase spoken pinyin (lowercase, space separated, no tones)"
+    depends on NOMI_VOICE_COMMANDS
+    default "xiao mi tong xue"
 endmenu
