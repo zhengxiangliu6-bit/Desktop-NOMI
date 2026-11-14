@@ -8,7 +8,7 @@
 - 对固定ESP-SR 2.0.1单麦预编译库的feed/create/VAD实现作反汇编核对：ring单位为1024字节，VAD保留speech+delay历史，feed满时返回0。原5单位5120字节低于128+128ms的8192字节历史需求，是明确的容量配置缺陷，与用户故障吻合；此前仅检查feed<0也漏报丢帧。
 - 修改`firmware/main/wake/wake_word_controller.cpp`：ring=50（51200字节有界缓冲，MORE_PSRAM保持）、显式VAD speech/delay各128ms，新增`AFE_BUFFER`配置日志；feed<=0立即停止本轮。未改引脚、采样率、表情、串口demo或模型。
 - `firmware/CMakeLists.txt`版本0.2.1；同步`docs/HARDWARE_H2.md`及本交接。不增加组件、不购买模型，不上传原始日志/音频。
-- 本地原生CTest 3/3、Python构建审计4/4通过；audio目标编译/模型与链接入口审计通过。benchmark及远端CI结果见后续交付记录。
+- 本地原生CTest 3/3、Python构建审计4/4通过；audio目标编译/模型与链接入口审计通过。benchmark目标编译/模型及链接入口审计也通过。修复提交`db1090e`已推送独立H2分支；GitHub Actions运行43622526392已启动，记录时仍进行中，尚不宣称远端通过。本地两个ZIP的manifest均记录该提交且source_dirty=false。
 - 复测：刷写0.2.1 audio包后确认`AFE_BUFFER ring_units=50`，观察开机、说话/安静与`status`，至少间隔10秒采样两次；state=2、blocks/fetched均持续增长、无full/stalled/新增overflow才可继续30分钟测试。重复off/on/reinit及demo回归。当前没有实体修复通过证据；准确“小米同学”模型依旧不可用。
 
 ## 开始调查与基线
