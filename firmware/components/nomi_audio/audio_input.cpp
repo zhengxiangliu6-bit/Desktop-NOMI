@@ -6,6 +6,13 @@ namespace {
 const char *TAG = "nomi_audio";
 constexpr gpio_num_t PA = GPIO_NUM_9;
 esp_err_t codec_result(int r) { return r == ESP_CODEC_DEV_OK ? ESP_OK : ESP_FAIL; }
+void release_channel(i2s_chan_handle_t &channel)
+{
+    if (!channel) return;
+    i2s_chan_info_t info = {};
+    if (i2s_channel_get_info(channel, &info) == ESP_OK && info.is_enabled) i2s_channel_disable(channel);
+    i2s_del_channel(channel); channel = nullptr;
+}
 }
 bool AudioInput::overflow(i2s_chan_handle_t, i2s_event_data_t *, void *context)
 {
@@ -68,6 +75,14 @@ esp_err_t AudioInput::open()
         ESP_RETURN_ON_ERROR(codec_result(esp_codec_dev_set_out_mute(dac_, true)), TAG, "DAC mute");
         ESP_RETURN_ON_ERROR(codec_result(esp_codec_dev_open(adc_, &format)), TAG, "ADC open");
         ESP_RETURN_ON_ERROR(codec_result(esp_codec_dev_set_in_gain(adc_, 24.f)), TAG, "Mic gain");
+        i2s_chan_info_t info = {};
+        ESP_RETURN_ON_ERROR(i2s_channel_get_info(rx_, &info), TAG, "RX format query");
+        const auto *actual = static_cast<const i2s_std_config_t *>(info.mode_cfg);
+        if (!info.is_enabled || info.mode != I2S_COMM_MODE_STD || !actual ||
+            actual->clk_cfg.sample_rate_hz != 16000 || actual->slot_cfg.data_bit_width != I2S_DATA_BIT_WIDTH_16BIT ||
+            actual->slot_cfg.slot_mode != I2S_SLOT_MODE_STEREO) return ESP_ERR_INVALID_STATE;
+        ESP_LOGI(TAG, "I2S_FORMAT_VERIFIED sample=16000 data_bits=16 stereo=2 MCLK=%lu BCLK=%lu",
+                 (unsigned long)info.mclk_hz, (unsigned long)info.bclk_hz);
         return gpio_set_level(PA, 0);
     };
     const auto result = initialize();
@@ -91,8 +106,8 @@ void AudioInput::close()
     if (dac_ctrl_) { audio_codec_delete_ctrl_if(dac_ctrl_); dac_ctrl_ = nullptr; }
     if (gpio_) { audio_codec_delete_gpio_if(gpio_); gpio_ = nullptr; }
     if (data_) { audio_codec_delete_data_if(data_); data_ = nullptr; }
-    if (rx_) { i2s_channel_disable(rx_); i2s_del_channel(rx_); rx_ = nullptr; }
-    if (tx_) { i2s_channel_disable(tx_); i2s_del_channel(tx_); tx_ = nullptr; }
+    // Codec close may already have disabled either channel. Query before disabling again.
+    release_channel(rx_); release_channel(tx_);
     if (bus_) { i2c_del_master_bus(bus_); bus_ = nullptr; }
 }
 }

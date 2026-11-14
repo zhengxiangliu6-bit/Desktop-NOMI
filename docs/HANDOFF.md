@@ -35,8 +35,9 @@
 ## 已执行验证与真实结果
 
 - `python firmware/scripts/prepare.py`：四个官方依赖提交与模型SHA256核验通过；不依赖组件注册表，第三方checkout保持干净。
-- `python firmware/scripts/build.py --profile audio --package`：IDF build/size、模型数0、偏移/ELF运行入口审计通过，app **1,043,968字节**，模型镜像 **4字节**。静态DIRAM约104,735字节。
-- `python firmware/scripts/build.py --profile benchmark --package`：同样通过，app **1,047,200字节**，模型 **291,150字节**（唯一小爱同学）；静态DIRAM约104,947字节。app4MB/model2MB分区，均在16MB内；运行堆/CPU/栈还须实机测。
+- `python firmware/scripts/build.py --profile audio --package`：IDF build/size、模型数0、偏移/ELF运行入口审计通过，app **1,044,320字节**，模型镜像 **4字节**。静态DIRAM约104,735字节。
+- `python firmware/scripts/build.py --profile benchmark --package`：同样通过，app **1,047,552字节**，模型 **291,150字节**（唯一小爱同学）；静态DIRAM约104,947字节。app4MB/model2MB分区，均在16MB内；运行堆/CPU/栈还须实机测。
+- 音频接口在打开Codec后查询实际I²S驱动配置并核对16kHz/16bit/stereo，打印I2S_FORMAT_VERIFIED与时钟；关闭前查询is_enabled，避免Codec已关闭时重复disable产生误导日志。修改后两profile重新build/size/打包审计通过。
 - ELF未发现esp_wifi_init、esp_http_client_init、esp_tls_conn_new、esp_mn_handle_from_name、esp_tts_create运行入口；源码没有网络初始化/上传、ASR/LLM/TTS调用。上游SR CMake声明TTS/MultiNet静态库不代表本固件启用了它们。
 - `cmake -S firmware/tests -B /tmp/nomi-h2-tests -G Ninja -DNOMI_RENDER_TESTS=ON`、build、ctest：**3/3通过**（H1核心状态、八表情真实LVGL离屏渲染、wake/PCM策略）。覆盖旧epoch、重复/未验证模型、demo隔离、Listening保持、极值/静音/声道/对齐。
 - `python -m unittest discover -s firmware/tests -p 'test_*.py' -v`：**4/4通过**，覆盖错误模型/数量/profile/芯片/偏移/网络和ASR/TTS入口拒绝。它只测试打包审计，不是假音频冒充模型成功。
@@ -90,7 +91,10 @@ firmware/tests/wake_logic_test.cpp
 
 ## 提交与推送
 
-待推送后补录真实结果；按用户要求不创建PR、不合并main。
+- 实现提交 `3975363`，已成功推送 `feat/h2-local-wakeword`。
+- 首轮云端运行43619456065，原生检查成功；I²S格式/关闭检查的后续修正也推送同分支，产物以最新成功运行和manifest的source_commit为准。
+- 使用全新临时目录实际运行prepare的SR/Codec sparse fetch/checkout与模型哈希检查：通过；不是仅复用已安装依赖。
+- 按用户要求未创建PR、未合并main，原厂备份不在本工作区。后续远端最终结果另行补录。
 
 ---
 

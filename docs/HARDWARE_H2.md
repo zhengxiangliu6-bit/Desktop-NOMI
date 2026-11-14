@@ -91,7 +91,7 @@ H1 用户日志可用内部 RAM 324,575 字节、PSRAM 8,386,308 字节；它只
    ```
 
    `D:\NOMI-H2-audio` 替换为你实际解压目录。按生成的 response file 写 app/bootloader/表/**模型分区**；**不能只刷 app，否则可能读取旧模型。不要执行 erase_flash。** 此操作会改变固件分区布局，不能保证 H1/原厂旧分区内容继续可用；保留备份用于恢复。
-5. 检查 `AFE_READY`、profile、16kHz PCM信息；audio版没有唤醒成功是预期行为。benchmark版说“小爱同学”，观察事件与Listening；不要说它已经识别“小米同学”。串口Ctrl+]退出。
+5. 检查 `I2S_FORMAT_VERIFIED`、`AFE_READY`、profile、16kHz PCM信息；audio版没有唤醒成功是预期行为。benchmark版说“小爱同学”，观察事件与Listening；不要说它已经识别“小米同学”。串口Ctrl+]退出。
 
 可用串口命令：
 
