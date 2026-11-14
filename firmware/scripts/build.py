@@ -13,6 +13,14 @@ import zipfile
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 
 
+def source_git(*args):
+    # Actions containers may use a different UID from the checkout owner.
+    # Trust only this known repository, for this single Git invocation.
+    return subprocess.check_output(
+        ["git", "-c", f"safe.directory={ROOT.parent.resolve()}", *args], cwd=ROOT, text=True
+    ).strip()
+
+
 def validate(build, profile):
     config = (build / "config" / "sdkconfig.json").read_text(encoding="utf-8")
     cfg = json.loads(config)
@@ -64,8 +72,8 @@ def package(build, profile, config, args):
         "target_phrase": "小米同学", "target_model_available": False,
         "active_model": "wn9_xiaoaitongxue" if profile == "benchmark" else None,
         "active_phrase": "小爱同学 (BENCHMARK ONLY)" if profile == "benchmark" else None,
-        "source_commit": subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip(),
-        "source_dirty": bool(subprocess.check_output(["git", "status", "--porcelain"], cwd=ROOT, text=True).strip()),
+        "source_commit": source_git("rev-parse", "HEAD"),
+        "source_dirty": bool(source_git("status", "--porcelain")),
         "sha256": {name: hashlib.sha256(path.read_bytes()).hexdigest() for name, path in files.items()},
         "flash_files": args["flash_files"],
     }

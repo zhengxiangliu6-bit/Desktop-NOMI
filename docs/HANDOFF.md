@@ -92,7 +92,7 @@ firmware/tests/wake_logic_test.cpp
 ## 提交与推送
 
 - 实现提交 `3975363`，已成功推送 `feat/h2-local-wakeword`。
-- 首轮云端运行43619456065，原生检查成功；I²S格式/关闭检查的后续修正也推送同分支，产物以最新成功运行和manifest的source_commit为准。
+- 首轮云端运行43619456065：原生检查成功，两个固件都完成目标编译/size/模型与ELF审计，但打包读取Git元数据遇到Actions容器UID归属检查（dubious ownership），未上传产物。修复为每次Git查询只信任当前仓库的准确绝对路径，不改全局配置、不使用通配信任。I²S格式/关闭修正提交d335bf7也已推送，最终产物以修复后的最新成功运行和manifest的source_commit为准。
 - 使用全新临时目录实际运行prepare的SR/Codec sparse fetch/checkout与模型哈希检查：通过；不是仅复用已安装依赖。
 - 按用户要求未创建PR、未合并main，原厂备份不在本工作区。后续远端最终结果另行补录。
 
