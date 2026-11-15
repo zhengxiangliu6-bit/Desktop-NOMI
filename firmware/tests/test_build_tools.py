@@ -58,6 +58,12 @@ class BuildAuditTest(unittest.TestCase):
         (self.root/"srmodels/srmodels.bin").write_bytes(blob[:-1])
         with self.assertRaises(ValueError): self.audit("commands", "esp_mn_handle_from_name")
 
+    def test_usb_asr_profile_has_no_device_models(self):
+        self.config["NOMI_USB_ASR"] = True
+        self.write(); self.audit("usb_asr")
+        with self.assertRaises(ValueError): self.audit("audio")
+        with self.assertRaises(ValueError): self.audit("usb_asr", "esp_mn_handle_from_name")
+
     def test_wrong_profile_and_offsets(self):
         with self.assertRaises(ValueError): self.audit("benchmark")
         self.args["flash_files"]["0x420000"] = self.args["flash_files"].pop("0x410000")

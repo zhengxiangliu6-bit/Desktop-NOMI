@@ -1,5 +1,7 @@
 # Desktop-NOMI 本地语音指令固件
 
+> 当前新增0.4.0 [USB中文转录调试版](../docs/USB_CHINESE_TRANSCRIPTION.md)：用户已同意Windows本地ASR；板载麦克风经USB传音频，电脑显示实际中文，暂不执行语音表情动作。旧0.3.0有限指令版本保留，不能视为任意中文转录或已通过激活验收。
+
 当前新增 **0.3.0 commands**：在ESP32-S3上识别“小米同学”激活和有限中文表情指令，不依赖电脑、网络或云服务。实现是MultiNet7连续词表匹配，不是专用WakeNet模型，真实效果待实机验收。
 
 完整操作/自定义名称/Windows烧录/正负样本验收见 [HARDWARE_VOICE](../docs/HARDWARE_VOICE.md)。

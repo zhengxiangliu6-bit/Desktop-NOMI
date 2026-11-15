@@ -1,0 +1,4 @@
+sherpa-onnx==2.0.1
+sherpa-onnx-core==2.0.1
+numpy==2.2.6
+pyserial==3.5

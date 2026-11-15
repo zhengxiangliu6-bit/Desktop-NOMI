@@ -2,6 +2,8 @@
 #include "face_view.h"
 #include "wake_word_controller.h"
 #include "nomi_panel.h"
+#include "usb_audio_stream.h"
+#include <cstdio>
 #include "esp_check.h"
 #include "esp_log.h"
 #include "esp_system.h"
@@ -20,16 +22,24 @@ uint32_t lv_clock() { return uint32_t(now_ms()); }
 nomi::FaceModel model;
 nomi::FaceView view;
 nomi::WakeWordController wake;
+#if CONFIG_NOMI_USB_ASR
+nomi::UsbAudioStream usb_audio;
+#endif
 nomi::WakeLatch wake_latch;
 nomi::VoiceSession voice_session;
 bool voice_hold = false;
 uint64_t voice_feedback_until = 0;
 uint32_t max_frame_gap_ms = 0;
-#if CONFIG_NOMI_VOICE_COMMANDS
+#if CONFIG_NOMI_VOICE_COMMANDS || CONFIG_NOMI_USB_ASR
 lv_obj_t *voice_indicator = nullptr;
 uint32_t indicator_color = 0;
 void update_voice_indicator(uint64_t now, bool demo_active) {
     uint32_t color = 0xe8a26e; // Initialization or demo: voice control unavailable.
+#if CONFIG_NOMI_USB_ASR
+    const unsigned state = usb_audio.state();
+    color = state == 3 ? 0xd64242 : state == 2 ? 0x287cc4 : state == 1 ? 0xe8a26e : 0x8b9199;
+    (void)now; (void)demo_active;
+#else
     switch (wake.state()) {
     case nomi::WakeState::Fault: color = 0xd64242; break;
     case nomi::WakeState::Disabled: color = 0x8b9199; break;
@@ -39,6 +49,7 @@ void update_voice_indicator(uint64_t now, bool demo_active) {
         break;
     default: break;
     }
+#endif
     if (color != indicator_color) {
         lv_obj_set_style_bg_color(voice_indicator, lv_color_hex(color), 0); indicator_color = color;
     }
@@ -50,8 +61,14 @@ uint64_t demo_at = 0;
 const char *const sequence[] = {"idle", "blink", "happy", "sad", "curious", "thinking", "listening", "speaking"};
 void status()
 {
+#if CONFIG_NOMI_USB_ASR
+    usb_audio.status();
+#else
     wake.status();
+#endif
+#if !CONFIG_NOMI_USB_ASR
     ESP_LOGI(TAG, "VOICE_SESSION active=%d; local finite commands only", voice_session.listening(now_ms()));
+#endif
     ESP_LOGI(TAG, "uptime_ms=%llu main_stack_free_bytes=%u max_frame_gap_ms=%lu",
              (unsigned long long)now_ms(), unsigned(uxTaskGetStackHighWaterMark(nullptr)), (unsigned long)max_frame_gap_ms);
     ESP_LOGI(TAG, "phase=%d emotion=%d internal_free=%u psram_free=%u min_heap=%u",
@@ -63,6 +80,14 @@ void status()
 void command(const char *text, uint64_t now)
 {
     if (!std::strcmp(text, "status")) { status(); return; }
+#if CONFIG_NOMI_USB_ASR
+    if (!std::strcmp(text, "stream off") || !std::strcmp(text, "wake off")) { usb_audio.off(); return; }
+    if (!std::strcmp(text, "stream status")) { usb_audio.status(); return; }
+    unsigned long token = 0; unsigned mic = 0; char tail = 0;
+    if (std::sscanf(text, "stream on %8lx %u %c", &token, &mic, &tail) == 2) { usb_audio.on(uint32_t(token), mic); return; }
+    if (std::sscanf(text, "stream ping %8lx %c", &token, &tail) == 1) { usb_audio.ping(uint32_t(token)); return; }
+    if (!std::strncmp(text, "wake ", 5)) { ESP_LOGI(TAG, "USB ASR diagnostic: start/stop with host application, not wake commands"); return; }
+#endif
     if (!std::strcmp(text, "wake status")) { wake.status(); return; }
     voice_session.reset(now); voice_hold = false;
     if (!std::strcmp(text, "wake on") || !std::strcmp(text, "wake reinit") || !std::strcmp(text, "wake off")) {
@@ -120,7 +145,7 @@ extern "C" void app_main()
     model.reset(now_ms());
     view.create();
     view.render(model.update(now_ms()), model.phase());
-#if CONFIG_NOMI_VOICE_COMMANDS
+#if CONFIG_NOMI_VOICE_COMMANDS || CONFIG_NOMI_USB_ASR
     voice_indicator = lv_obj_create(lv_screen_active());
     lv_obj_remove_style_all(voice_indicator);
     lv_obj_remove_flag(voice_indicator, LV_OBJ_FLAG_SCROLLABLE);
@@ -131,8 +156,16 @@ extern "C" void app_main()
 #endif
     nomi_panel_show();
     ESP_LOGI(TAG, "Commands + Enter: idle blink happy sad curious thinking listening speaking demo status");
+#if CONFIG_NOMI_USB_ASR
+    usb_audio.start();
+#else
     wake.start();
+#endif
+#if CONFIG_NOMI_USB_ASR
+    ESP_LOGI(TAG, "USB ASR diagnostic: microphone OFF until Windows host starts; no voice actions");
+#else
     ESP_LOGI(TAG, "Local microphone requested. Commands: wake off | wake on | wake reinit | wake status");
+#endif
     status();
     uint64_t previous_frame = 0;
     uint64_t frame_at = 0;
@@ -191,7 +224,7 @@ extern "C" void app_main()
         if (now >= frame_at) {
             if (previous_frame && now - previous_frame > max_frame_gap_ms) max_frame_gap_ms = now - previous_frame;
             previous_frame = now;
-#if CONFIG_NOMI_VOICE_COMMANDS
+#if CONFIG_NOMI_VOICE_COMMANDS || CONFIG_NOMI_USB_ASR
             update_voice_indicator(now, demo);
 #endif
             auto frame = model.update(now);

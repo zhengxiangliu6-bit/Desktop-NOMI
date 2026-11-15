@@ -1,3 +1,28 @@
+# 0.4.0 USB板载采音与Windows中文转录
+
+用户明确回答“是的”，同意调试阶段由Windows本地ASR，暂时放宽“仅ESP32识别”；仍不上传云端、不保存录音/转录、不执行语音表情指令。本阶段验证真实板载声音转中文，不再以预设指令标签替代任意转录。
+
+- 从干净`docs/h2-chinese-asr-assessment` / `5fb0877`创建`feat/h2-usb-chinese-transcription`，不创建PR、不合并main、不覆盖原厂备份。
+- 新增`usb_asr`固件profile（0.4.0）：独立`UsbAudioStream` CPU0/8192栈，只复用准确1.85B AudioInput与现有脸；默认关闭采音，host随机token显式启动、0.4秒心跳/约2秒租约，USB20ms短写/I2S错误或溢出即关闭。MIC1/2可选，原始PCM16LE/16kHz单声道、每320采样一帧；不启动AFE/WakeNet/MultiNet，不播放声音/执行语音动作。手动八表情/demo保留。
+- USBASCII帧包含版本、token、seq、channel、覆盖元数据+640字节PCM的FNV1a32、base64；主UI不做采音/推理。PC单独读取/心跳线程、至多25帧/0.5秒队列和帧时效检查，损坏/缺帧/积压均报错停止，不把断续音频当正常转录。
+- PC程序固定sherpa-onnx及core2.0.1、NumPy2.2.6、pyserial3.5，64位Python3.10–3.13；`setup.cmd`创建独立venv而非修改IDF环境，首次下载公开约21MB中文流式Zipformer2-CTC模型，归档/文件SHA256锁定。`start.cmd COM3`按Enter采音，Ctrl+C停止。Windows终端UTF-8显示真实临时/最终中文及音频/错误，模型运行阶段不联网、不访问电脑麦克风。
+- 权重与轮子不放入交付ZIP或Git；交付下载/校验脚本。模型上游归档未附独立LICENSE，准确记录不补造。公开样本软件测试用上游归档0.wav，不含用户录音，不将它当实体麦克风测试。
+
+## 文件
+
+- 新固件：`firmware/main/stream/pcm_frame.h`、`usb_audio_stream.h/.cpp`、`firmware/sdkconfig.usb_asr`、`firmware/tests/pcm_frame_test.cpp`。
+- 新PC工具：`tools/usb_asr/{protocol.py,transcribe.py,recognizer.py,setup_model.py,smoke_test.py,model.lock.json,requirements.txt,setup.cmd,start.cmd,README.md,.gitignore,tests/test_protocol.py}`。
+- 调整固件main/Kconfig/CMake、build.py/profile及打包/测试、GitHub Actions四profile和host_asr公开样本job。更新README、firmware说明、架构/API/路线图、H1/H2/VOICE和本交接；完整Windows和验收见 [USB_CHINESE_TRANSCRIPTION](USB_CHINESE_TRANSCRIPTION.md)。Web前后端、GitHub Pages、密钥机制不变。
+
+## 已执行与待验收
+
+- Linux真实引擎2.0.1加载固定模型，通过帧解析链路流式解码公开16kHz/mono/16bit样本0.wav，281帧，得到27个中文字符的最终文本。模型加载约0.75秒，5.61秒样本总解码约0.89秒为本云端一次参考，不是Windows/实体延迟承诺。归档SHA256 `b3b309f7ce4a737195fcc6963ea19b0653a7d3401580af5ae0d3e284cbb71f0b`，样本与权重hash在model.lock.json。
+- CTest5/5（含原模型/LVGL/会话及新增PCM格式/校验/边界）；Python固件审计6/6；PC协议/线程测试4/4（字节序极值、日志/旧会话、损坏/序号/声道、开始/心跳/异常停止/积压）。actionlint通过。usb_asr目标构建及无板载模型/网络/TTS入口审计已通过。
+- **Windows安装/字体与驱动、真实板载声音的USB吞吐和中文效果、硬件Ctrl+C/断线/租约关闭、30分钟稳定性仍待用户实机测试**。本次有目标编译和公开音频软件证据，不声称实体链路已通过。准确“小米同学”0.3.0激活也未通过；新版本不要求唤醒、不执行表情指令。
+- 下载包`desktop-nomi-h2-usb_asr.zip`包含完整四文件flash_args、host工具pc目录、版本/源码/哈希/文档。刷入后默认灰点，PC按Enter后蓝点表示传送而非认对文字；红点故障。COM3只能由一个程序占用，不同时开miniterm。可刷回旧0.3.0完整commands包恢复原试验，不整片擦除。
+
+---
+
 # 中文任意讲话转录：重新评估（2026-11-15）
 
 用户实机反馈0.3.0绿点，但说“小米同学”无Listening/颜色变化；目标激活尚未验收通过。最新需求是先暂停动作扩展，串口显示**任意讲话的真实中文转录**。用户已明确选择“先重新评估”，不接受用已知词表的中文标签代替转录。

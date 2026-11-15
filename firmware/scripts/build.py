@@ -30,6 +30,8 @@ def validate(build, profile):
         raise ValueError("Wrong profile in existing build directory")
     if bool(cfg.get("NOMI_VOICE_COMMANDS")) != (profile == "commands"):
         raise ValueError("Wrong command recognition profile")
+    if bool(cfg.get("NOMI_USB_ASR")) != (profile == "usb_asr"):
+        raise ValueError("Wrong USB ASR profile")
     data = (build / "srmodels" / "srmodels.bin").read_bytes()
     # Parse every model record rather than assuming directory/packing order.
     count = struct.unpack_from("<I", data)[0]
@@ -41,7 +43,7 @@ def validate(build, profile):
         files = struct.unpack_from("<I", data, cursor+32)[0]
         cursor += 36+files*40
         if cursor > len(data): raise ValueError("Truncated model file table")
-    expected = {"audio": [], "benchmark": ["wn9_xiaoaitongxue"], "commands": ["mn7_cn", "fst"]}[profile]
+    expected = {"audio": [], "usb_asr": [], "benchmark": ["wn9_xiaoaitongxue"], "commands": ["mn7_cn", "fst"]}[profile]
     if sorted(names) != sorted(expected): raise ValueError(f"Wrong models: {names}")
     if len(data) > 0x400000: raise ValueError("Model partition overflow")
     args = json.loads((build / "flasher_args.json").read_text(encoding="utf-8"))
@@ -79,8 +81,13 @@ def package(build, profile, config, args):
         "H2-NOTICE.md": "components/nomi_audio/NOTICE.md",
     }.items():
         files["licenses/" + name] = ROOT / path
-    for name in ("HARDWARE_H2.md", "HARDWARE_H1.md", "HARDWARE_VOICE.md"):
+    for name in ("HARDWARE_H2.md", "HARDWARE_H1.md", "HARDWARE_VOICE.md", "USB_CHINESE_TRANSCRIPTION.md"):
         files["docs/" + name] = ROOT.parent / "docs" / name
+    if profile == "usb_asr":
+        host = ROOT.parent / "tools/usb_asr"
+        for path in host.iterdir():
+            if path.is_file() and path.suffix in (".py", ".cmd", ".txt", ".json", ".md"):
+                files["pc/" + path.name] = path
     built_config = json.loads((build / "config/sdkconfig.json").read_text(encoding="utf-8"))
     description = {
         "board": "Waveshare ESP32-S3-Touch-LCD-1.85B", "idf": "5.5.4", "profile": profile,
@@ -91,6 +98,8 @@ def package(build, profile, config, args):
         "configured_activation_pinyin": built_config.get("NOMI_VOICE_WAKE_PINYIN") if profile == "commands" else None,
         "firmware_version": json.loads((build / "project_description.json").read_text(encoding="utf-8"))["project_version"],
         "voice_hardware_verified": False,
+        "asr_location": "Windows local CPU" if profile == "usb_asr" else None,
+        "microphone_starts": "explicit host request with 2s heartbeat" if profile == "usb_asr" else "boot",
         "active_phrase": built_config.get("NOMI_VOICE_WAKE_LABEL") if profile == "commands" else "小爱同学 (BENCHMARK ONLY)" if profile == "benchmark" else None,
         "source_commit": source_git("rev-parse", "HEAD"),
         "source_dirty": bool(source_git("status", "--porcelain")),
@@ -113,6 +122,23 @@ Terminal:
 Commands: status / demo / wake off / wake on / wake reinit / wake status
 See manifest.json for offsets, SHA256 and model identity.
 '''
+    if profile == "usb_asr":
+        readme = """Desktop-NOMI USB Chinese transcription diagnostic / 0.4.0
+Board: Waveshare ESP32-S3-Touch-LCD-1.85B ONLY
+Device captures audio only. ASR runs LOCALLY on Windows. No voice actions.
+Read docs/USB_CHINESE_TRANSCRIPTION.md before use.
+Flash all files with the supplied flash_args, no full-chip erase:
+  python -m esptool --chip esp32s3 --port COM3 --baud 460800 write_flash "@flash_args"
+Close miniterm/other COM3 apps. In an ESP-IDF terminal, first run:
+  pc\\setup.cmd
+Then:
+  pc\\start.cmd COM3
+Setup downloads Python dependencies and a fixed ~21MB public Chinese model.
+Runtime does not upload audio or save recordings/transcripts.
+Press Enter in the app to start the board microphone; Ctrl+C stops it.
+Do not use a separate miniterm while the app owns COM3.
+See manifest.json for file hashes and source revision.
+"""
     with zipfile.ZipFile(output, "w", zipfile.ZIP_DEFLATED) as archive:
         for name, path in files.items():
             archive.write(path, name)
@@ -124,7 +150,7 @@ See manifest.json for offsets, SHA256 and model identity.
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--profile", choices=("audio", "benchmark", "commands"), default="audio")
+    parser.add_argument("--profile", choices=("audio", "benchmark", "commands", "usb_asr"), default="audio")
     parser.add_argument("--package", action="store_true")
     parser.add_argument("--skip-prepare", action="store_true")
     options = parser.parse_args()

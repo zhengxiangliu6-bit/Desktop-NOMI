@@ -1,5 +1,7 @@
 # Desktop-NOMI
 
+> 当前新增0.4.0 [USB中文转录调试版](docs/USB_CHINESE_TRANSCRIPTION.md)：用户已同意Windows本地ASR；板载麦克风经USB传音频，电脑显示实际中文，暂不执行语音表情动作。旧0.3.0有限指令版本保留，不能视为任意中文转录或已通过激活验收。
+
 > 新增独立ESP32离线语音指令profile（0.3.0），见 [语音硬件方案](docs/HARDWARE_VOICE.md)：MultiNet7连续中文词表识别“小米同学”激活、20秒会话及表情指令；不依赖电脑/网络，不改Web API或API Key机制。专用WakeNet模型仍未获得，新增语音效果待实机验收。
 
 面向 Windows 电脑的虚拟桌面 AI 伙伴，灵感来自 NOMI 的陪伴体验；本项目与蔚来无隶属或授权关系。先在浏览器中验证动态表情、自然语言与语音交互，再评估桌面封装及 ESP32-S3 硬件。

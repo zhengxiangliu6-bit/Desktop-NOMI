@@ -1,5 +1,7 @@
 # H2：本地音频与唤醒词接入
 
+> 当前新增0.4.0 [USB中文转录调试版](USB_CHINESE_TRANSCRIPTION.md)：用户已同意Windows本地ASR；板载麦克风经USB传音频，电脑显示实际中文，暂不执行语音表情动作。旧0.3.0有限指令版本保留，不能视为任意中文转录或已通过激活验收。
+
 > 后续需求已扩展为独立ESP32语音指令，见 [HARDWARE_VOICE](HARDWARE_VOICE.md)。本文的“无ASR/模型未获得”描述针对原audio/benchmark阶段；commands使用通用MultiNet7词表匹配“小米同学”，不是专用WakeNet。0.3.0模型分区扩大为4MB。
 
 **「小米同学」专用模型不可用，当前不能宣称已实现这个唤醒词。**

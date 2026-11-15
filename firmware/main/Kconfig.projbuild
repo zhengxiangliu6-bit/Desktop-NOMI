@@ -10,6 +10,8 @@ choice NOMI_WAKE_PROFILE
     config NOMI_VOICE_COMMANDS
         bool "Offline Chinese commands with configurable activation phrase (MultiNet7)"
         select SR_MN_CN_MULTINET7_QUANT
+    config NOMI_USB_ASR
+        bool "USB microphone transport for Windows local Chinese transcription (no device ASR/actions)"
 endchoice
 config NOMI_VOICE_WAKE_LABEL
     string "Activation phrase display label"

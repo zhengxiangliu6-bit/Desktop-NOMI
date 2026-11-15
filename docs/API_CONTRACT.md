@@ -1,5 +1,7 @@
 # 后端 API 契约：阶段 2A / 2B 消费者
 
+> 当前新增0.4.0 [USB中文转录调试版](USB_CHINESE_TRANSCRIPTION.md)：用户已同意Windows本地ASR；板载麦克风经USB传音频，电脑显示实际中文，暂不执行语音表情动作。旧0.3.0有限指令版本保留，不能视为任意中文转录或已通过激活验收。
+
 > 新增独立ESP32离线语音指令profile（0.3.0），见 [语音硬件方案](HARDWARE_VOICE.md)：MultiNet7连续中文词表识别“小米同学”激活、20秒会话及表情指令；不依赖电脑/网络，不改Web API或API Key机制。专用WakeNet模型仍未获得，新增语音效果待实机验收。
 
 状态：已实现并以 pytest / 本地 HTTP 验证，真实模型账号验证未执行。阶段 2B 在显式 api 开发模式中经同源代理接入；默认前端与 Pages 仍为纯 Mock。基础路径 `/api/v0`，UTF-8 JSON，字段 snake_case。
@@ -122,3 +124,7 @@ Pydantic schema 快照为 contracts/chat-v0.json，由 backend/scripts/export_co
 不增加HTTP接口。fetch worker仅传递内部`VoiceEvent {epoch, id, probability, at_ms}`；主UI检查当前epoch、1500ms事件时效、阈值>=0.90、demo及激活窗口。id=1激活，2–8表情，9/10待机结束会话，11表情demo；原有串口ASCII协议保留。
 
 串口可观察事件：`WAKE_WORD_DETECTED source=multinet_command`仅在应用接受激活时输出；`VOICE_COMMAND_ACCEPTED id=... action=... probability=...`仅在应用接受表情/demo时输出；`VOICE_SLEEP`/`VOICE_SESSION_TIMEOUT`结束会话；`VOICE_IGNORED`说明候选被门控拒绝。事件不包含录音或自由转录。内部识别结果及人工串口命令不能作为真实语音识别验收的替代。
+
+## USB转录调试协议0.4.0
+
+仅usb_asr profile接受`stream on <8位hex token> <mic 1|2>`、`stream ping <同token>`、`stream off`、`stream status`；默认采音关闭，心跳租约约2秒。响应音频为`@NOMI1 token seq channel FNV1a32 base64_PCM`行，PCM固定640字节/20ms，元数据与PCM共同校验；seq0开始连续。ASR文本由Windows本地程序显示，不回送ESP32执行指令、不新增HTTP接口。PC独占COM端口，不能同时开miniterm。详见USB中文转录文档的检错/停止/隐私与待实测边界。
