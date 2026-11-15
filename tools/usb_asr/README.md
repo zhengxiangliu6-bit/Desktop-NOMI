@@ -1,3 +1,9 @@
+# PC语音控制0.4.1更新（不用重新烧录）
+
+已安装0.4.0的用户：将ZIP中的pc文件夹合并覆盖到`D:\NOMI-ASR-debug`，保留已有`.venv`与`models`。在pc目录运行`start_control.cmd COM3`，按Enter开始；先说“小米同学”或“你好小米同学”，设备确认Listening后再说“开心一点”等。20秒无有效指令或“休息一下”回待机。只用最终结果，不做模糊匹配、不接AI/TTS/云服务。
+
+完整词表、更新、设备回执与待测边界见更新包内`VOICE_CONTROL_GUIDE.md`或仓库`docs/PC_VOICE_CONTROL.md`。`start.cmd COM3`继续为纯转录，不执行动作；不必重新setup/下载模型。PC模式仍需电脑运行。
+
 # ESP32板载麦克风 → Windows本地中文转录
 
 需要64位Python3.10–3.13（可使用已安装的ESP-IDF终端中的Python）、USB转录调试固件0.4.0、真实COM端口。此程序不打开电脑麦克风。识别在Windows CPU进行；默认不保存音频或转录，运行阶段不调用网络服务。

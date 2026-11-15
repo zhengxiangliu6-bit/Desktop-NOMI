@@ -1,5 +1,7 @@
 # 后端 API 契约：阶段 2A / 2B 消费者
 
+> 新增PC 0.4.1 [本地语音控制](PC_VOICE_CONTROL.md)：沿用已验证0.4.0固件和电脑ASR，仅最终中文结果驱动唤醒/表情/20秒超时，串口回执与忽略原因可见。仅更新电脑程序；仍需Windows，真实控制效果待验收。
+
 > 当前新增0.4.0 [USB中文转录调试版](USB_CHINESE_TRANSCRIPTION.md)：用户已同意Windows本地ASR；板载麦克风经USB传音频，电脑显示实际中文，暂不执行语音表情动作。旧0.3.0有限指令版本保留，不能视为任意中文转录或已通过激活验收。
 
 > 新增独立ESP32离线语音指令profile（0.3.0），见 [语音硬件方案](HARDWARE_VOICE.md)：MultiNet7连续中文词表识别“小米同学”激活、20秒会话及表情指令；不依赖电脑/网络，不改Web API或API Key机制。专用WakeNet模型仍未获得，新增语音效果待实机验收。
@@ -128,3 +130,7 @@ Pydantic schema 快照为 contracts/chat-v0.json，由 backend/scripts/export_co
 ## USB转录调试协议0.4.0
 
 仅usb_asr profile接受`stream on <8位hex token> <mic 1|2>`、`stream ping <同token>`、`stream off`、`stream status`；默认采音关闭，心跳租约约2秒。响应音频为`@NOMI1 token seq channel FNV1a32 base64_PCM`行，PCM固定640字节/20ms，元数据与PCM共同校验；seq0开始连续。ASR文本由Windows本地程序显示，不回送ESP32执行指令、不新增HTTP接口。PC独占COM端口，不能同时开miniterm。详见USB中文转录文档的检错/停止/隐私与待实测边界。
+
+## PC语音控制0.4.1（固件协议不变）
+
+PC仅用ASR最终文本进行明确短语匹配，临时/停止后补出的文字不执行。经20秒激活门控后向同一串口写已有ASCII表情命令；心跳、指令及关闭由同一接收线程写入。任意时刻最多等待一个`nomi: Command accepted: <cmd> (5s TTL)`回执；1.5秒未确认、不一致/积压则停止，日志片段可跨完整PCM帧重组。回执仅说明设备接受，不证明物理屏幕显示完成。指令/名称列表、重复去重及timeout/退出语义见PC语音控制说明；不新增HTTP接口或修改固件。

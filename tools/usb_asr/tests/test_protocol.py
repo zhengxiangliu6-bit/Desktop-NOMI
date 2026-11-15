@@ -50,12 +50,43 @@ class ProtocolTests(unittest.TestCase):
     def test_reader_rejects_corruption_and_stops(self):
         class Serial:
             def __init__(self):self.writes=[]
-            def write(self,data):self.writes.append(data)
+            def write(self,data):self.writes.append(data);return len(data)
             def read(self,n):return frame(seq=9)
         port=Serial();reader=BoardReader(port,0x12345678,1,queue.Queue(25),threading.Event())
         reader.run()
         self.assertIsInstance(reader.error,ProtocolError)
         self.assertEqual(port.writes[-1],b'stream off\r\n')
 
+
+
+class ControlReaderTests(unittest.TestCase):
+    def test_control_ack_split_by_pcm_and_shutdown(self):
+        from command_channel import CommandChannel
+        reports=[];stop=threading.Event();output=queue.Queue(25)
+        channel=CommandChannel(time.monotonic,lambda *x:reports.append(x))
+        channel.submit('happy','test final phrase')
+        class Serial:
+            def __init__(self):self.writes=[];self.sent=False
+            def write(self,data):self.writes.append(data);return len(data)
+            def read(self,n):
+                if not self.sent:
+                    self.sent=True
+                    return b'I (123) nomi: Command accep\n'+frame()+b'ted: happy (5s TTL)\r\n'
+                if channel.pending is None:stop.set()
+                return b''
+        port=Serial();reader=BoardReader(port,0x12345678,1,output,stop,channel)
+        reader.run()
+        self.assertIsNone(reader.error)
+        self.assertEqual(reader.parser.frames,1)
+        self.assertIn(b'happy\r\n',port.writes)
+        self.assertEqual(port.writes[-2:],[b'idle\r\n',b'stream off\r\n'])
+        self.assertTrue(any(x[0]=='设备确认' for x in reports))
+
+    def test_short_control_write_is_an_error(self):
+        class Serial:
+            def write(self,data):return len(data)-1
+        reader=BoardReader(Serial(),1,1,queue.Queue(25),threading.Event())
+        reader.run()
+        self.assertIsInstance(reader.error,ProtocolError)
 
 if __name__=='__main__':unittest.main()

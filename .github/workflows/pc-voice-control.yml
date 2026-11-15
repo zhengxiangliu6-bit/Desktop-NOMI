@@ -1,0 +1,43 @@
+name: Windows local voice control
+on:
+  push:
+    branches: [feat/h2-pc-voice-control]
+    paths: ['tools/usb_asr/**', 'docs/PC_VOICE_CONTROL.md', '.github/workflows/pc-voice-control.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  software:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Protocol, final text gate, serial acknowledgment and cancellation tests
+        run: python -m unittest discover -s tools/usb_asr/tests -v
+      - name: Install pinned local ASR runtime
+        run: python -m pip install -r tools/usb_asr/requirements.txt
+      - name: Decode public Chinese sample (software only, not a hardware test)
+        run: |
+          python tools/usb_asr/setup_model.py
+          python tools/usb_asr/smoke_test.py
+  package:
+    needs: software
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Package PC update only (no firmware or private files)
+        run: python tools/usb_asr/package_pc.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: desktop-nomi-pc-voice-control-v0.4.1
+          path: tools/usb_asr/dist/desktop-nomi-pc-voice-control-v0.4.1.zip
+          if-no-files-found: error

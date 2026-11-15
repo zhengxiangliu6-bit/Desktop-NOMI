@@ -1,3 +1,30 @@
+# PC 0.4.1：Windows本地ASR驱动唤醒和表情
+
+用户已明确同意“利用现有中文转录链路，先唤醒/表情/20秒待机”，并要求开始修改。**本次只更新PC程序，沿用0.4.0 usb_asr固件、同一模型和依赖，无需重新烧录、setup或下载模型。** 仍需Windows运行，不是ESP32独立识别。
+
+## 基线与实机证据
+
+- 从干净`feat/h2-usb-chinese-transcription` / `6fc6723`创建独立`feat/h2-pc-voice-control`；不创建PR、不合并main、不修改备份或固件。
+- 用户Windows Python3.11/x64实际安装成功，使用板载MIC1经USB得到多句中文临时/最终结果；短时连续帧从86增至1993、队列一般2–3、绝大多数时段无削波，最后一段有瞬时削波；Ctrl+C关闭串口正常。说明原始采音→USB→Windows本地ASR短时链路已通过用户实测，不能推断长期稳定或0.3.0独立唤醒已通过。不记录其原始对话/日志或录音到仓库。
+
+## 修改与决策
+
+- 新增`tools/usb_asr/voice_control.py`：只消费最终中文，NFKC/标点/空格归一化后精确匹配“小米同学”或“你好小米同学”；七种非idle表情短语、休息/待机，20秒窗口、重复去重、超时、否定/长句/相似名称拒绝。不做模糊修正。普通表情约5秒后恢复Listening；2秒续发Listening仅维持现有固件5秒TTL，不延长会话。
+- 新增`command_channel.py`：接收线程独占所有串口写，最多一个待确认命令、1.5秒回执超时、1秒指令积压拒绝、有限队列；重组被完整PCM帧隔开的IDF字符日志，解析现有`nomi: Command accepted: <cmd> (5s TTL)`。只声称设备接受指令，屏幕实际效果仍需观察，不虚构渲染确认或命令ID。
+- 修改`transcribe.py`：显式`--voice-control`启用；打印真实最终结果、接受/忽略原因、发送/设备确认。停止/异常后的结果不执行；退出若已控制设备则请求idle后stream off，退出阶段不等回执，并明确说明。物理断线无法发送idle时仍靠原固件TTL回退，待实机测。
+- 新`start_control.cmd`启动新模式；旧`start.cmd`保持纯转录诊断。可用`--wake-name`配置PC激活名称，仍需ASR准确转录；不购买/训练模型，不调用云端/LLM/TTS，不保存录音/转录。
+- 新`package_pc.py`仅打包显式允许的PC文件和说明，ZIP为pc目录更新，不包含固件、模型、venv、录音或其它用户文件。保留已有`.venv`/`models`并合并更新，不删除整个pc目录。
+- 测试：扩展`tests/test_protocol.py`，新增`tests/test_voice_control.py`。新Actions `pc-voice-control.yml`在Linux/Windows Python3.11运行控制/串口测试和真实模型公开中文样本测试，再打包PC-only更新；不为纯PC变更重刷或重新构建固件。
+- 文档：新增 [PC_VOICE_CONTROL](PC_VOICE_CONTROL.md)，更新tools README、根README、ARCHITECTURE、API_CONTRACT、ROADMAP及本交接。完整修改清单见本节所列文件；API Key、Web API/Pages和八表情固件未改。
+
+## 验证及剩余事项
+
+- 本地Python单元14/14，覆盖未唤醒/近似词/否定/长句、最终vs临时/停止结果隔离、唤醒/表情/休息/超时/去重/续发不续期、串口序列化、PCM间插日志回执、旧/错误/缺失回执、短写、积压和异常退出。actionlint与Python语法检查通过。
+- 同一真实引擎/模型的公开中文样本软件解码已通过；不是新完整物理控制测试。**Windows/实体屏幕的新唤醒→表情→超时、实际回执交错、故障回退、30分钟稳定性均待用户验收**。
+- 更新包为`desktop-nomi-pc-voice-control-v0.4.1.zip`，与固件0.4.0 usb_asr兼容；当前模型和依赖锁不变。操作：停止旧程序，将ZIP内pc合并至`D:\NOMI-ASR-debug`，在pc目录执行`start_control.cmd COM3`，先唤醒，再说“开心一点”，核对最终文字/接受/发送/设备确认/实际屏幕五层。
+
+---
+
 # 0.4.0 USB板载采音与Windows中文转录
 
 用户明确回答“是的”，同意调试阶段由Windows本地ASR，暂时放宽“仅ESP32识别”；仍不上传云端、不保存录音/转录、不执行语音表情指令。本阶段验证真实板载声音转中文，不再以预设指令标签替代任意转录。
