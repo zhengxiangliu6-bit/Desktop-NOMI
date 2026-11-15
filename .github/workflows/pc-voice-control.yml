@@ -4,6 +4,8 @@ on:
     branches: [feat/h2-pc-voice-control]
     paths: ['tools/usb_asr/**', 'docs/PC_VOICE_CONTROL.md', '.github/workflows/pc-voice-control.yml']
   workflow_dispatch:
+env:
+  PYTHONUTF8: '1' # Match setup.cmd/start_control.cmd, including English-locale Windows runners.
 permissions:
   contents: read
 jobs:
