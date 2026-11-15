@@ -17,6 +17,16 @@
 - 已有用户短时实际成功唤醒/happy/sad/blink/休息反馈，伴随本次两次异常；不能算0.4.2修复通过、全路径或30分钟验收。**0.4.2实体重复唤醒、稳定ACK/会话到期/断线/实际屏幕仍待复测**。云端成功不能代替实体证据。
 - 本次不承诺固定一次说话一定识别，不提高ASR/传输时延阈值掩盖回执异常。先看0.4.2握手、重复唤醒extend、无周期Listening发送，再复测普通表情、20秒静音待机和退出。
 
+
+## 0.4.2 最终交付记录
+
+- 实现提交`3e12f57`已推送`fix/h2-control-ack-session`，不创建PR、不合并main。后续本节仅作交付记录。
+- 完整固件包`firmware/dist/desktop-nomi-control-fix-v0.4.2.zip`约4.1MB（usb_asr.zip同内容），内含0.4.2固件、pc程序、当前说明和哈希；app651,696字节、空模型4字节，布局/引脚/依赖未变。单独pc更新包也已生成，但不能搭配0.4.0固件使用。
+- 四profile本地目标构建/审计/打包通过；完整包和PC包manifest source_commit=3e12f57、source_dirty=false，逐文件SHA256复核通过。无用户日志/录音、权重或venv写入ZIP。
+- [固件CI 43736013355](https://github.com/zhengxiangliu6-bit/Desktop-NOMI/actions/runs/43736013355)：四ESP32构建、native、host_asr六job均success。[PC CI 43736013387](https://github.com/zhengxiangliu6-bit/Desktop-NOMI/actions/runs/43736013387)：Windows/Linux软件测试及公开中文解码、打包三job均success。目标编译/软件验证不代表0.4.2实体复测通过。
+- 用户升级：关闭旧程序；新ZIP解压`D:\NOMI-042`，在该目录用现有esptool COM3和@flash_args完整写入；将新pc合并至原`D:\NOMI-ASR-debug`保留venv/models，在原pc目录运行start_control.cmd COM3，跳过setup。原厂备份不动，不整片擦除。
+- 待用户重点复测probe编号握手、Listening再次叫名称只extend、表情展示中重复唤醒不中断、两种眨眼短语、20秒静音待机和断线。旧普通日志回执缺失的具体物理成因仍未实证，本修复移除其控制依赖及周期刷新流量，不伪称已实测根治硬件异常。
+
 ---
 
 # PC 0.4.1：Windows本地ASR驱动唤醒和表情
