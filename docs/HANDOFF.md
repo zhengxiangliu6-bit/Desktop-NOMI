@@ -23,6 +23,15 @@
 - 同一真实引擎/模型的公开中文样本软件解码已通过；不是新完整物理控制测试。**Windows/实体屏幕的新唤醒→表情→超时、实际回执交错、故障回退、30分钟稳定性均待用户验收**。
 - 更新包为`desktop-nomi-pc-voice-control-v0.4.1.zip`，与固件0.4.0 usb_asr兼容；当前模型和依赖锁不变。操作：停止旧程序，将ZIP内pc合并至`D:\NOMI-ASR-debug`，在pc目录执行`start_control.cmd COM3`，先唤醒，再说“开心一点”，核对最终文字/接受/发送/设备确认/实际屏幕五层。
 
+
+## PC 0.4.1 最终交付记录
+
+- 实现提交`9bbc2a7`，Windows CI按实际cmd启动器设置UTF-8的修正`3aca65e`，均推送`feat/h2-pc-voice-control`，不创建PR、不合并main。未改任何firmware文件（与6fc6723比较为空），不生成或要求重刷固件。
+- 首次CI中Linux与两端14项控制测试通过，但英文区域Windows直接运行setup_model时cp1252无法打印中文，公开样本job失败。修正CI全局`PYTHONUTF8=1`与既有setup/start启动器一致，不跳过测试、不更换模型。
+- [Actions运行43734112490](https://github.com/zhengxiangliu6-bit/Desktop-NOMI/actions/runs/43734112490)：Windows/Linux Python3.11控制单元和真实模型公开样本解码均success，PC-only package job success。此为软件验证，不是新实体语音控制通过。
+- 本地更新包`tools/usb_asr/dist/desktop-nomi-pc-voice-control-v0.4.1.zip`：仅15个PC/说明/manifest文件，约20KB；source_commit=3aca65e、source_dirty=false，逐文件SHA256已校验。无固件、模型、venv或录音，部署为合并pc目录并运行start_control.cmd COM3，保留原缓存与安装环境。
+- 等用户实测：最终文字→接受/忽略→串口发送→设备接受回执→实际Listening/表情→20秒待机；实际回执交错/断线/退出与长期稳定性未验收。该记录另作后续文档提交，更新包与CI源码仍为3aca65e。
+
 ---
 
 # 0.4.0 USB板载采音与Windows中文转录
