@@ -1,5 +1,7 @@
 # 后端 API 契约：阶段 2A / 2B 消费者
 
+> 0.4.2修复见[当前语音控制说明](PC_VOICE_CONTROL.md)：固件与PC成对升级，使用编号/校验回执和设备端20秒聆听会话，取消电脑每2秒刷新；原模型/依赖不变，实体修复待复测。以下0.4.0/0.4.1描述保留历史范围。
+
 > 新增PC 0.4.1 [本地语音控制](PC_VOICE_CONTROL.md)：沿用已验证0.4.0固件和电脑ASR，仅最终中文结果驱动唤醒/表情/20秒超时，串口回执与忽略原因可见。仅更新电脑程序；仍需Windows，真实控制效果待验收。
 
 > 当前新增0.4.0 [USB中文转录调试版](USB_CHINESE_TRANSCRIPTION.md)：用户已同意Windows本地ASR；板载麦克风经USB传音频，电脑显示实际中文，暂不执行语音表情动作。旧0.3.0有限指令版本保留，不能视为任意中文转录或已通过激活验收。
@@ -134,3 +136,7 @@ Pydantic schema 快照为 contracts/chat-v0.json，由 backend/scripts/export_co
 ## PC语音控制0.4.1（固件协议不变）
 
 PC仅用ASR最终文本进行明确短语匹配，临时/停止后补出的文字不执行。经20秒激活门控后向同一串口写已有ASCII表情命令；心跳、指令及关闭由同一接收线程写入。任意时刻最多等待一个`nomi: Command accepted: <cmd> (5s TTL)`回执；1.5秒未确认、不一致/积压则停止，日志片段可跨完整PCM帧重组。回执仅说明设备接受，不证明物理屏幕显示完成。指令/名称列表、重复去重及timeout/退出语义见PC语音控制说明；不新增HTTP接口或修改固件。
+
+## 0.4.2 USB控制协议
+
+当前控制以PC_VOICE_CONTROL.md为准：ctl token/seq/action，NOMI_ACK1 token/seq/action/status/hash；probe握手，FNV校验，同序号重放无副作用，旧会话/序号不能确认新指令。完整回执由采音任务单次driver write发出；原ESP_LOG日志不再作为确认。固件自动管理20秒远端聆听和5秒展示，extend只续期、不切换表情，租约失效清理；原ASCII手动命令及NOMI1 PCM保留。0.4.2 PC控制不兼容0.4.0旧固件，必须成对升级。

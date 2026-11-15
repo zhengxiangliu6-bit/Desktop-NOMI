@@ -1,3 +1,24 @@
+# 0.4.2：Listening后台回执超时修复
+
+用户0.4.1上传日志有两次PC`listening`确认1.5秒超时。第二次发生于新唤醒词临时结果，尚未提交新唤醒；第一段已激活重复唤醒曾成功，后续后台刷新才超时。因此不能归因于“重复唤醒直接崩溃”，也未看到足够设备重启证据。普通日志缺失/无法重组的具体成因未实机确认，不伪称已定位某个硬件故障。不提交用户原始日志、完整对话或音频。
+
+- 从干净`feat/h2-pc-voice-control` / `a548b94`新建`fix/h2-control-ack-session`，不创建PR、不合并main、不改备份。此前仅PC更新的承诺适用于0.4.1；本修复为摆脱旧日志确认，**必须成对更新固件和PC到0.4.2**，原模型/依赖不变，不重新setup/下载模型，不整片擦除。
+- 新`firmware/main/stream/remote_control.h`：独立20秒远端会话/5秒展示、probe/extend/八表情、序号缓存幂等、重复/旧请求无副作用、租约失效回idle。UI负责渲染和到期检查，不把控制逻辑放入FaceModel。
+- main接受`ctl token seq action`，验证当前音频会话租约后执行并入队完整ACK；采音任务有界队列发送`@NOMI_ACK1 token seq action status hash`单次driver write，脱离ESP_LOG逐字符日志。仅USB profile TX缓冲1024→4096，UI队列写不等待，不阻塞显示。保留NOMI1 PCM、原采样/引脚、ASCII手动命令和八表情。
+- PC CommandChannel用token/seq/动作/FNV校验确认，probe #0握手；普通日志不能确认，旧会话/延迟回执不确认新指令，不自动重发动作。缺失/错/损坏回执仍明确停机，不把它静默当成功。
+- VoiceControl取消全部2秒Listening续发；固件自动保持/恢复Listening到20秒。已激活再次叫名称只extend续期，不重置当前表情；新增“眨眼一下”“开心一下”“难过一下”明确别名，不做模糊匹配。临时/停止结果和无关/否定句仍不执行。
+- 升级版本、打包/文档/CI：完整固件ZIP带pc和当前PC控制说明；单独pc更新包标明需0.4.2固件，旧0.4.0握手拒绝。Windows/Linux软件测试、四profile目标构建及原生状态/渲染/PCM回归列入Actions。
+
+## 文件与验证
+
+- 固件：新增remote_control.h/tests/remote_control_test.cpp，调整main.cpp、usb_audio_stream.h/.cpp、CMake版本/测试、build.py打包；无Codec/引脚、模型或前后端/API Key/Pages改动。
+- PC：调整command_channel.py、voice_control.py、transcribe.py、package_pc.py及两套测试；模型锁、依赖及start/setup安装方式不变。文档更新PC_VOICE_CONTROL、tools README、根/firmware README、架构/API/路线图/USB说明和交接。
+- 本地PC测试16/16、CTest6/6（含设备会话/重放/续期/租约/ACK格式与跨语言校验向量）、actionlint通过。usb_asr目标编译已通过；完整新产物与远端结果见交付记录。
+- 已有用户短时实际成功唤醒/happy/sad/blink/休息反馈，伴随本次两次异常；不能算0.4.2修复通过、全路径或30分钟验收。**0.4.2实体重复唤醒、稳定ACK/会话到期/断线/实际屏幕仍待复测**。云端成功不能代替实体证据。
+- 本次不承诺固定一次说话一定识别，不提高ASR/传输时延阈值掩盖回执异常。先看0.4.2握手、重复唤醒extend、无周期Listening发送，再复测普通表情、20秒静音待机和退出。
+
+---
+
 # PC 0.4.1：Windows本地ASR驱动唤醒和表情
 
 用户已明确同意“利用现有中文转录链路，先唤醒/表情/20秒待机”，并要求开始修改。**本次只更新PC程序，沿用0.4.0 usb_asr固件、同一模型和依赖，无需重新烧录、setup或下载模型。** 仍需Windows运行，不是ESP32独立识别。

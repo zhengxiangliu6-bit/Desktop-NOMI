@@ -103,17 +103,18 @@ def main(argv=None):
         sys.stdout.reconfigure(encoding='utf-8', errors='replace')
     from recognizer import ChineseRecognizer
     import serial
-    out('版本', 'PC语音控制0.4.1；兼容已验证的USB采音固件0.4.0，无需重新烧录。')
+    out('版本', 'PC语音控制0.4.2；需要配套USB采音固件0.4.2（编号回执）。')
     out('准备', '加载电脑本地中文模型；音频来自ESP32板载麦克风，不上传、不保存录音或转录。')
     recognizer = ChineseRecognizer(verify_model(), args.threads)
     input('按 Enter 开始麦克风采集；Ctrl+C 停止：')
     control = VoiceControl(args.wake_name) if args.voice_control else None
-    channel = CommandChannel(time.monotonic, out) if control else None
+    token = secrets.randbelow(0xffffffff)+1
+    channel = CommandChannel(time.monotonic, out, token) if control else None
     stop = threading.Event()
     frames = queue.Queue(maxsize=25) # 500ms total queued audio, never unbounded retention.
     with serial.Serial(args.port, 115200, timeout=0.05, write_timeout=0.5) as port:
         port.reset_input_buffer()
-        reader = BoardReader(port, secrets.randbelow(0xffffffff)+1, args.mic, frames, stop, channel)
+        reader = BoardReader(port, token, args.mic, frames, stop, channel)
         reader.start()
         out('状态', f'已请求 {args.port} / 板载MIC{args.mic}。')
         out('控制', f'已启用：先说“{args.wake_name}”或“你好{args.wake_name}”，看到设备确认后再说表情指令。' if control else '纯转录模式：不需要唤醒，不执行表情。')

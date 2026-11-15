@@ -1,6 +1,7 @@
 #include "usb_audio_stream.h"
 #if CONFIG_NOMI_USB_ASR
 #include "pcm_frame.h"
+#include <cstring>
 #include "driver/usb_serial_jtag.h"
 #include "esp_log.h"
 #include "esp_timer.h"
@@ -8,9 +9,21 @@ namespace nomi {
 namespace { const char *TAG = "usb_audio"; uint32_t clock_ms() { return uint32_t(esp_timer_get_time()/1000); } }
 bool UsbAudioStream::start() {
     if (task_) return false;
-    if (xTaskCreatePinnedToCore(entry, "usb_audio", 8192, this, 4, &task_, 0) != pdPASS) { state_=3; return false; }
-    ESP_LOGI(TAG, "USB_ASR_READY; microphone OFF until host starts; no device ASR or voice actions");
+    replies_=xQueueCreate(8,sizeof(Reply));
+    if (!replies_) { state_=3; return false; }
+    if (xTaskCreatePinnedToCore(entry, "usb_audio", 8192, this, 4, &task_, 0) != pdPASS) { vQueueDelete(replies_); replies_=nullptr; state_=3; return false; }
+    ESP_LOGI(TAG, "USB_ASR_READY; microphone OFF until host starts; no device ASR; ctl ACK1 remote control supported");
     return true;
+}
+bool UsbAudioStream::reply(const char *text, size_t size) {
+    if (!replies_ || !text || !size || size>=120) return false;
+    Reply item{}; item.size=size; std::memcpy(item.text,text,size);
+    return xQueueSend(replies_,&item,0)==pdTRUE;
+}
+void UsbAudioStream::send_replies() {
+    Reply item;
+    for (int i=0;i<4 && xQueueReceive(replies_,&item,0)==pdTRUE;++i)
+        usb_serial_jtag_write_bytes(item.text,item.size,pdMS_TO_TICKS(20));
 }
 void UsbAudioStream::on(uint32_t token, unsigned channel) {
     if (!task_ || !token || (channel != 1 && channel != 2)) return;
@@ -18,11 +31,13 @@ void UsbAudioStream::on(uint32_t token, unsigned channel) {
 }
 void UsbAudioStream::off() { token_ = 0; }
 void UsbAudioStream::ping(uint32_t token) { if (token && token == token_) heartbeat_ = clock_ms(); }
+bool UsbAudioStream::session_active(uint32_t token) const { return token && token==token_ && clock_ms()-heartbeat_.load()<=2000; }
 void UsbAudioStream::status() const { ESP_LOGI(TAG, "state=%u frames=%lu mic=%u (PCM16LE/16000Hz/mono; 2s heartbeat lease)", state(), (unsigned long)frames_.load(), unsigned(channel_.load())); }
 void UsbAudioStream::run() {
     int16_t stereo[stream_samples*2], mono[stream_samples];
     char line[1024];
     for (;;) {
+        send_replies();
         const uint32_t session = token_;
         if (!session) { vTaskDelay(pdMS_TO_TICKS(20)); continue; }
         state_ = 1; frames_ = 0;
@@ -31,6 +46,7 @@ void UsbAudioStream::run() {
         size_t filled = 0; unsigned empty = 0, warmup = 10;
         const unsigned channel = channel_;
         while (!bad && token_ == session) {
+            send_replies();
             if (clock_ms()-heartbeat_.load() > 2000) { ESP_LOGW(TAG, "Host heartbeat expired; stopping microphone"); break; }
             size_t received = 0;
             const auto result = audio_.read(stereo+filled/2, sizeof(stereo)-filled, &received);

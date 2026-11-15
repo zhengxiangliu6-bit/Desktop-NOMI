@@ -63,7 +63,7 @@ class ControlReaderTests(unittest.TestCase):
     def test_control_ack_split_by_pcm_and_shutdown(self):
         from command_channel import CommandChannel
         reports=[];stop=threading.Event();output=queue.Queue(25)
-        channel=CommandChannel(time.monotonic,lambda *x:reports.append(x))
+        channel=CommandChannel(time.monotonic,lambda *x:reports.append(x),0x12345678)
         channel.submit('happy','test final phrase')
         class Serial:
             def __init__(self):self.writes=[];self.sent=False
@@ -71,14 +71,19 @@ class ControlReaderTests(unittest.TestCase):
             def read(self,n):
                 if not self.sent:
                     self.sent=True
-                    return b'I (123) nomi: Command accep\n'+frame()+b'ted: happy (5s TTL)\r\n'
-                if channel.pending is None:stop.set()
+                    from test_voice_control import ack
+                    return frame()+ack(0x12345678,0,'probe')+b'\n'
+                if channel.pending and channel.pending.command=='happy':
+                    from test_voice_control import ack
+                    self.happy=True
+                    return ack(0x12345678,1,'happy')+b'\n'
+                if getattr(self,'happy',False):stop.set()
                 return b''
         port=Serial();reader=BoardReader(port,0x12345678,1,output,stop,channel)
         reader.run()
         self.assertIsNone(reader.error)
         self.assertEqual(reader.parser.frames,1)
-        self.assertIn(b'happy\r\n',port.writes)
+        self.assertTrue(any(b'00000001 happy' in w for w in port.writes))
         self.assertEqual(port.writes[-2:],[b'idle\r\n',b'stream off\r\n'])
         self.assertTrue(any(x[0]=='设备确认' for x in reports))
 

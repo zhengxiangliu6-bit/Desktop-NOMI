@@ -35,17 +35,26 @@ class VoiceControlTests(unittest.TestCase):
     def test_timeout_sleep_renew_and_duplicate(self):
         c=VoiceControl();c.final('小米同学',0)
         self.assertIsNone(c.final('小米同学',0.5).command)
-        self.assertEqual(c.tick(2).command,'listening')
+        self.assertIsNone(c.tick(2))
         self.assertEqual(c.until,20) # display renewal must never extend conversational expiry
         self.assertEqual(c.final('开心一点',3).command,'happy')
         self.assertIsNone(c.tick(7.9))
-        self.assertEqual(c.tick(8.1).command,'listening')
+        self.assertIsNone(c.tick(8.1))
         self.assertEqual(c.tick(23).command,'idle')
         self.assertIsNone(c.final('开心一点',24).command)
         c.final('小米同学',25)
         self.assertEqual(c.final('休息一下',26).command,'idle')
         self.assertIsNone(c.final('难过一点',27).command)
         self.assertIsNone(c.tick(99))
+
+    def test_rewake_only_extends_and_never_schedules_periodic_commands(self):
+        c=VoiceControl();self.assertEqual(c.final('小米同学',0).command,'listening')
+        self.assertEqual(c.final('开心一点',2).command,'happy')
+        self.assertEqual(c.final('小米同学',5).command,'extend')
+        self.assertEqual(c.until,25)
+        for now in range(6,25):self.assertIsNone(c.tick(now))
+        self.assertEqual(c.tick(25).command,'idle')
+        self.assertIsNone(c.tick(27))
 
     def test_late_final_does_not_bypass_timeout(self):
         c=VoiceControl();c.final('小米同学',1)
@@ -62,41 +71,55 @@ class VoiceControlTests(unittest.TestCase):
         with self.assertRaises(ValueError):c.final('你好',float('nan'))
 
 
+def ack(token,seq,command,status='OK'):
+    from protocol import checksum
+    payload=f'{command} {status}'.encode()
+    return f'@NOMI_ACK1 {token:08x} {seq:08x} {command} {status} {checksum(token,seq,0,payload):08x}'.encode()
+
+
 class ChannelTests(unittest.TestCase):
     def setUp(self):
         self.now=0;self.events=[];self.written=[]
-        self.c=CommandChannel(lambda:self.now,lambda *v:self.events.append(v))
+        self.c=CommandChannel(lambda:self.now,lambda *v:self.events.append(v),123)
+        self.c.tick(self.written.append)
+        self.assertIn(b'00000000 probe',self.written[-1])
+        self.c.observe(ack(123,0,'probe'))
 
-    def test_serializes_requests_and_recovers_log_fragments(self):
-        self.c.submit('listening','wake');self.c.submit('happy','face')
-        self.c.tick(self.written.append)
-        self.assertEqual(self.written,[b'listening\r\n'])
-        self.c.observe(b'\x1b[0;32mI (120) nomi: Command accep')
-        self.c.tick(self.written.append)
-        self.assertEqual(len(self.written),1)
-        self.c.observe(b'ted: listening (5s TTL)\x1b[0m')
-        self.assertIsNone(self.c.pending)
-        self.c.tick(self.written.append)
-        self.assertEqual(self.written[-1],b'happy\r\n')
-        self.c.observe(b'I (130) nomi: Command accepted: happy (5s TTL)')
-        self.assertEqual(sum(e[0]=='设备确认' for e in self.events),2)
-
-    def test_missing_wrong_or_old_ack_is_not_success(self):
-        self.c.observe(b'I (100) nomi: Command accepted: happy (5s TTL)')
-        self.c.submit('happy','face');self.c.tick(self.written.append)
+    def test_matches_token_sequence_command_and_checksum(self):
+        self.c.submit('listening','wake');self.c.tick(self.written.append)
+        self.c.observe(b'nomi: Command accepted: listening (5s TTL)')
         self.assertIsNotNone(self.c.pending)
+        self.c.observe(ack(999,1,'listening'))
+        self.assertIsNotNone(self.c.pending)
+        self.c.observe(ack(123,1,'listening'))
+        self.assertIsNone(self.c.pending)
+        self.c.submit('listening','later');self.c.tick(self.written.append)
+        self.c.observe(ack(123,1,'listening')) # delayed duplicate cannot confirm request #2
+        self.assertIsNotNone(self.c.pending)
+        self.c.observe(ack(123,2,'listening'))
+        self.assertIsNone(self.c.pending)
+
+    def test_missing_wrong_corrupt_or_rejected_ack_fails_closed(self):
+        self.c.submit('happy','face');self.c.tick(self.written.append)
+        with self.assertRaises(ProtocolError):self.c.observe(ack(123,1,'idle'))
+        with self.assertRaises(ProtocolError):self.c.observe(ack(123,1,'happy')[:-1]+b'0')
+        with self.assertRaises(ProtocolError):self.c.observe(ack(123,1,'happy','STALE'))
         self.now=1.6
         with self.assertRaises(ProtocolError):self.c.tick(self.written.append)
-        self.assertFalse(any(e[0]=='设备确认' for e in self.events))
-        with self.assertRaises(ProtocolError):self.c.observe(b'I (120) nomi: Command accepted: idle (5s TTL)')
 
     def test_rejects_unsupported_stale_and_overflow(self):
         with self.assertRaises(ValueError):self.c.submit('erase_flash','bad')
         self.c.submit('idle','sleep');self.now=1.1
         with self.assertRaises(ProtocolError):self.c.tick(self.written.append)
-        self.assertEqual(self.written,[])
         for _ in range(8):self.c.submit('idle','sleep')
         with self.assertRaises(ProtocolError):self.c.submit('idle','overflow')
+
+    def test_old_firmware_cannot_handshake_with_log_ack(self):
+        c=CommandChannel(lambda:self.now,lambda *x:None,123)
+        c.tick(self.written.append)
+        c.observe(b'nomi: Command accepted: listening (5s TTL)')
+        self.now=1.6
+        with self.assertRaisesRegex(ProtocolError,'0.4.2'):c.tick(self.written.append)
 
 
 if __name__=='__main__':unittest.main()

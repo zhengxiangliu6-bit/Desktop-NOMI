@@ -3,6 +3,7 @@
 #include "wake_word_controller.h"
 #include "nomi_panel.h"
 #include "usb_audio_stream.h"
+#include "remote_control.h"
 #include <cstdio>
 #include "esp_check.h"
 #include "esp_log.h"
@@ -24,6 +25,7 @@ nomi::FaceView view;
 nomi::WakeWordController wake;
 #if CONFIG_NOMI_USB_ASR
 nomi::UsbAudioStream usb_audio;
+nomi::RemoteControl remote_control;
 #endif
 nomi::WakeLatch wake_latch;
 nomi::VoiceSession voice_session;
@@ -84,11 +86,29 @@ void command(const char *text, uint64_t now)
     if (!std::strcmp(text, "stream off") || !std::strcmp(text, "wake off")) { usb_audio.off(); return; }
     if (!std::strcmp(text, "stream status")) { usb_audio.status(); return; }
     unsigned long token = 0; unsigned mic = 0; char tail = 0;
+    unsigned long seq = 0; char action[12]{};
+    if (std::sscanf(text,"ctl %8lx %8lx %11s %c",&token,&seq,action,&tail)==3) {
+        auto reply=remote_control.apply(uint32_t(token),uint32_t(seq),action,now,usb_audio.session_active(uint32_t(token)));
+        if (reply.effect!=nomi::RemoteEffect::None) {
+            wake_latch.clear(); voice_session.reset(now); voice_hold=false; demo=false;
+            model.reset(now);
+            if (reply.effect==nomi::RemoteEffect::Face) model.command(action,now);
+        }
+        char ack[120];
+        const auto length=nomi::encode_control_ack(ack,sizeof(ack),uint32_t(token),uint32_t(seq),action,reply.status);
+        // Queue without blocking UI. The capture owner sends each ACK in one driver call.
+        if (length) usb_audio.reply(ack,length);
+        return;
+    }
+
     if (std::sscanf(text, "stream on %8lx %u %c", &token, &mic, &tail) == 2) { usb_audio.on(uint32_t(token), mic); return; }
     if (std::sscanf(text, "stream ping %8lx %c", &token, &tail) == 1) { usb_audio.ping(uint32_t(token)); return; }
     if (!std::strncmp(text, "wake ", 5)) { ESP_LOGI(TAG, "USB ASR diagnostic: start/stop with host application, not wake commands"); return; }
 #endif
     if (!std::strcmp(text, "wake status")) { wake.status(); return; }
+#if CONFIG_NOMI_USB_ASR
+    remote_control.clear();
+#endif
     voice_session.reset(now); voice_hold = false;
     if (!std::strcmp(text, "wake on") || !std::strcmp(text, "wake reinit") || !std::strcmp(text, "wake off")) {
         wake_latch.clear();
@@ -136,7 +156,12 @@ extern "C" void app_main()
              LVGL_VERSION_MAJOR, LVGL_VERSION_MINOR, LVGL_VERSION_PATCH);
     ESP_LOGI(TAG, "PSRAM initialized=%d size=%u", esp_psram_is_initialized(), unsigned(esp_psram_get_size()));
     usb_serial_jtag_driver_config_t serial = {};
-    serial.rx_buffer_size = 256; serial.tx_buffer_size = 1024;
+    serial.rx_buffer_size = 256;
+#if CONFIG_NOMI_USB_ASR
+    serial.tx_buffer_size = 4096; // PCM + bounded complete control replies.
+#else
+    serial.tx_buffer_size = 1024;
+#endif
     ESP_ERROR_CHECK(usb_serial_jtag_driver_install(&serial));
     lv_init();
     lv_tick_set_cb(lv_clock);
@@ -162,7 +187,7 @@ extern "C" void app_main()
     wake.start();
 #endif
 #if CONFIG_NOMI_USB_ASR
-    ESP_LOGI(TAG, "USB ASR diagnostic: microphone OFF until Windows host starts; no voice actions");
+    ESP_LOGI(TAG, "USB ASR: microphone OFF until Windows host starts; ctl ACK1 remote control");
 #else
     ESP_LOGI(TAG, "Local microphone requested. Commands: wake off | wake on | wake reinit | wake status");
 #endif
@@ -205,6 +230,10 @@ extern "C" void app_main()
         if (voice_session.tick(now) == nomi::VoiceAction::Timeout) {
             voice_hold = false; model.reset(now); ESP_LOGI(TAG, "VOICE_SESSION_TIMEOUT; idle");
         }
+#if CONFIG_NOMI_USB_ASR
+        if (remote_control.expire(now,usb_audio.session_active(remote_control.token()))) model.reset(now);
+        if (remote_control.hold(now) && !demo) model.set_phase(nomi::Phase::Listening,now);
+#endif
         if (wake.faulted()) { voice_session.reset(now); if (voice_hold) model.reset(now); voice_hold = false; }
         if (voice_session.listening(now) && !demo && !voice_hold && now >= voice_feedback_until) voice_hold = true;
         if (voice_hold) model.set_phase(nomi::Phase::Listening, now);

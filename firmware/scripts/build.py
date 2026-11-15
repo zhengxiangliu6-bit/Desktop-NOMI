@@ -81,10 +81,11 @@ def package(build, profile, config, args):
         "H2-NOTICE.md": "components/nomi_audio/NOTICE.md",
     }.items():
         files["licenses/" + name] = ROOT / path
-    for name in ("HARDWARE_H2.md", "HARDWARE_H1.md", "HARDWARE_VOICE.md", "USB_CHINESE_TRANSCRIPTION.md"):
+    for name in ("HARDWARE_H2.md", "HARDWARE_H1.md", "HARDWARE_VOICE.md", "USB_CHINESE_TRANSCRIPTION.md", "PC_VOICE_CONTROL.md"):
         files["docs/" + name] = ROOT.parent / "docs" / name
     if profile == "usb_asr":
         host = ROOT.parent / "tools/usb_asr"
+        files["pc/VOICE_CONTROL_GUIDE.md"] = ROOT.parent / "docs/PC_VOICE_CONTROL.md"
         for path in host.iterdir():
             if path.is_file() and path.suffix in (".py", ".cmd", ".txt", ".json", ".md"):
                 files["pc/" + path.name] = path
@@ -123,17 +124,19 @@ Commands: status / demo / wake off / wake on / wake reinit / wake status
 See manifest.json for offsets, SHA256 and model identity.
 '''
     if profile == "usb_asr":
-        readme = """Desktop-NOMI USB Chinese transcription diagnostic / 0.4.0
+        readme = """Desktop-NOMI USB audio and numbered control ACK / 0.4.2
 Board: Waveshare ESP32-S3-Touch-LCD-1.85B ONLY
-Device captures audio only. ASR runs LOCALLY on Windows. No voice actions.
+Device captures audio. ASR runs LOCALLY on Windows.
+0.4.2 PC control uses checksummed session/sequence ACKs and device-owned 20s Listening.
 Read docs/USB_CHINESE_TRANSCRIPTION.md before use.
 Flash all files with the supplied flash_args, no full-chip erase:
   python -m esptool --chip esp32s3 --port COM3 --baud 460800 write_flash "@flash_args"
 Close miniterm/other COM3 apps. In an ESP-IDF terminal, first run:
   pc\\setup.cmd
 Then:
-  pc\\start.cmd COM3
-Setup downloads Python dependencies and a fixed ~21MB public Chinese model.
+  pc\\start_control.cmd COM3
+For an existing installation: merge pc files into your original pc folder, keep .venv and models.
+No setup/model download is needed again. First-time setup downloads the pinned ~21MB model.
 Runtime does not upload audio or save recordings/transcripts.
 Press Enter in the app to start the board microphone; Ctrl+C stops it.
 Do not use a separate miniterm while the app owns COM3.

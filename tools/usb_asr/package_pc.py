@@ -18,10 +18,10 @@ def main():
         return subprocess.check_output(['git','-c',f'safe.directory={REPO}',*args],cwd=REPO,text=True).strip()
     files={"pc/"+name:ROOT/name for name in FILES}
     files['pc/VOICE_CONTROL_GUIDE.md']=REPO/'docs/PC_VOICE_CONTROL.md'
-    manifest={'pc_version':'0.4.1','compatible_firmware':'0.4.0 usb_asr',
+    manifest={'pc_version':'0.4.2','compatible_firmware':'0.4.2 usb_asr',
               'source_commit':git('rev-parse','HEAD'),'source_dirty':bool(git('status','--porcelain')),
               'sha256':{name:hashlib.sha256(path.read_bytes()).hexdigest() for name,path in files.items()}}
-    target=ROOT/'dist/desktop-nomi-pc-voice-control-v0.4.1.zip'
+    target=ROOT/'dist/desktop-nomi-pc-voice-control-v0.4.2.zip'
     target.parent.mkdir(exist_ok=True)
     with zipfile.ZipFile(target,'w',zipfile.ZIP_DEFLATED) as z:
         for name,path in files.items():z.write(path,name)
