@@ -21,6 +21,15 @@
 - **Windows安装/字体与驱动、真实板载声音的USB吞吐和中文效果、硬件Ctrl+C/断线/租约关闭、30分钟稳定性仍待用户实机测试**。本次有目标编译和公开音频软件证据，不声称实体链路已通过。准确“小米同学”0.3.0激活也未通过；新版本不要求唤醒、不执行表情指令。
 - 下载包`desktop-nomi-h2-usb_asr.zip`包含完整四文件flash_args、host工具pc目录、版本/源码/哈希/文档。刷入后默认灰点，PC按Enter后蓝点表示传送而非认对文字；红点故障。COM3只能由一个程序占用，不同时开miniterm。可刷回旧0.3.0完整commands包恢复原试验，不整片擦除。
 
+
+## 0.4.0 最终交付记录
+
+- 源码提交`50409c2`已推送`feat/h2-usb-chinese-transcription`。本次只提交独立分支，不创建PR、不合并main；后续仅更新本交接。
+- 四个profile本地最终目标构建/打包/审计通过：usb_asr app650,288字节/空模型4字节；audio1,046,704/4；benchmark1,049,952/291,150；commands1,135,008/2,681,351。最终ZIP逐文件SHA256复核通过，source_commit=50409c2、source_dirty=false。
+- [Actions运行43731645973](https://github.com/zhengxiangliu6-bit/Desktop-NOMI/actions/runs/43731645973)六个job全部success：四profile ESP32构建、native、host_asr真实引擎与公开中文样本软件测试。usb_asr artifact ID **14168781360**。Windows与实体设备验收仍未执行。
+- 可下载文件`firmware/dist/desktop-nomi-h2-usb-asr-v0.4.0.zip`（与usb_asr.zip相同，约3.9MB），内含pc工具/下载锁/说明，无权重、Python环境或WAV文件。首次`pc\setup.cmd`会下载公开依赖和约21MB模型；已安装后`pc\start.cmd COM3`按Enter开始板载采音。
+- 下一步只请用户读正常中文完整句子，观察电脑终端临时/最终文本和真实音频指标，不要求先说激活词，不执行语音表情动作。异常时收集程序错误文本，不索取录音或声称已修好实体识别效果。
+
 ---
 
 # 中文任意讲话转录：重新评估（2026-11-15）
