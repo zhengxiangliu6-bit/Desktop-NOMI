@@ -8,6 +8,13 @@
 - 文件：main/voice/command_recognizer.*、voice_session.h、wake_controller.*、main、原生门控测试；版本0.6.2、构建包说明/CI触发及OFFLINE/API/架构/路线图。本轮用户声音沿用仓库外私有素材，公开Git/Actions不含声音。
 - 已执行CTest8/8（增加默认0.90拒绝/0.60接受与低分、非法门槛拒绝）、Python9/9、actionlint/diff检查；commands目标初编译审计通过。提交后最终私有包/源码和完整目标检查另记。未声称硬件唤醒或0.60校准成功；下一步要用户一次测试候选与模型超时统计，若无候选继续查模型链路，若有则分别看ID/分数/会话接受，不盲目继续降低。
 
+## 0.6.2交付记录
+
+- 源码8f8a205，四profile本地ESP-IDF5.5.4最终构建/审计/打包全部通过，manifest source_dirty=false。私有commands包核验每个文件SHA256且原选定PCM确实在链接app内，用户音频未入公开Git/Actions。
+- 诊断包`firmware/dist/desktop-nomi-local-voice-diagnostic-v0.6.2.zip`，7,677,261字节，SHA256 `7690c9c4b1ef8b450b8cfd5abab6abeef0819510527a520062d5b6b3faab64df`。此包默认门槛90，使用时必须显式voice threshold 60并等APPLIED，再说一次目标词和wake status。不是已证明修复的生产门槛。
+- 公开GitHub固件run43902835650交付时仍运行，不写成云端通过；它只用仓库默认音频。原生8/8、Python9/9、actionlint/diff本轮已执行通过；私有目标本地构建完成。未创建PR/合并main。
+- 必须索取下一次实体候选/超时/接受或拒绝证据；当前不能声称小米同学唤醒成功或误触发率通过，也不能把score0.60称60%准确度。若60无候选，暂停盲降并进一步查模型/音频处理；若候选为其它ID或被拒绝，按对应层排查。
+
 ---
 
 # 当前0.6.1：用户选定固定回复的私有烧录包
