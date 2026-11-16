@@ -1,3 +1,5 @@
+> 0.5.1只有固定PCM音色和来源变化，沿用0.5.0能力/控制/保护协议。PC程序和词表保持0.5.0；不加“回到待基”别名，不改原始识别文字。
+
 > 0.5.0硬件/PC专用能力握手为ctl token seq probeall 0；原probe兼容保留，旧8表情固件不能通过probeall。action支持shared/expressions.json的14个ASCII命令及extend。spoken=0/1仍表示固定回应意图，PC --silent-replies强制0，默认人声已接受指令为1；会话/ACK/播放保护机制不变。此协议不属于Web HTTP API，后端情绪枚举与Key安全机制不变。 详见[表情指南](EXPRESSION_GALLERY.md)。
 
 # 后端 API 契约：阶段 2A / 2B 消费者

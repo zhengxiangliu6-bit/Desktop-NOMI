@@ -1,3 +1,5 @@
+> **0.5.1固定回应音色更新**：免费MeloTTS仅在开发时离线生成短PCM，设备不运行神经TTS；兼容PC0.5.0，不改指令/别名/20秒会话。新版实体听测待验。脱离电脑及AI决策见[方案对比](VOICE_NEXT_PLAN.md)。
+
 > 0.5.0硬件表情目录改为shared/expressions.json，生成C++/PC/TS消费者。14种LVGL矢量表情与Web独立SVG图库对应；不扩展后端聊天情绪API。Web仍纯Mock，PC本地ASR，远端语音会话独立于FaceModel。 详见[表情指南](EXPRESSION_GALLERY.md)。
 
 # 技术架构（V0 目标设计）

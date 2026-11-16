@@ -88,11 +88,19 @@ def package(build, profile, config, args):
         "H2-NOTICE.md": "components/nomi_audio/NOTICE.md",
     }.items():
         files["licenses/" + name] = ROOT / path
-    for name in ("HARDWARE_H2.md", "HARDWARE_H1.md", "HARDWARE_VOICE.md", "USB_CHINESE_TRANSCRIPTION.md", "PC_VOICE_CONTROL.md", "SPOKEN_OKAY.md", "EXPRESSION_GALLERY.md"):
+    for name in ("HARDWARE_H2.md", "HARDWARE_H1.md", "HARDWARE_VOICE.md", "USB_CHINESE_TRANSCRIPTION.md", "PC_VOICE_CONTROL.md", "SPOKEN_OKAY.md", "EXPRESSION_GALLERY.md", "VOICE_NEXT_PLAN.md"):
         files["docs/" + name] = ROOT.parent / "docs" / name
     if profile == "usb_asr":
+        # Export the exact embedded PCM as a listenable WAV, without a second source asset.
+        import wave
+        preview=build / "okay-preview.wav"
+        with wave.open(str(preview),"wb") as output:
+            output.setnchannels(1); output.setsampwidth(2); output.setframerate(16000)
+            output.writeframes((ROOT / "components/nomi_audio/assets/okay.pcm").read_bytes())
+        files["okay-preview.wav"]=preview
         files["assets/okay.json"] = ROOT / "components/nomi_audio/assets/okay.json"
         files["licenses/OKAY-ASSET.md"] = ROOT / "components/nomi_audio/assets/NOTICE.md"
+        files["licenses/MeloTTS.txt"] = ROOT / "components/nomi_audio/assets/MeloTTS-LICENSE.txt"
         host = ROOT.parent / "tools/usb_asr"
         files["pc/VOICE_CONTROL_GUIDE.md"] = ROOT.parent / "docs/PC_VOICE_CONTROL.md"
         files["pc/EXPRESSION_GUIDE.md"] = ROOT.parent / "docs/EXPRESSION_GALLERY.md"
@@ -135,10 +143,10 @@ Commands: status / demo / wake off / wake on / wake reinit / wake status
 See manifest.json for offsets, SHA256 and model identity.
 '''
     if profile == "usb_asr":
-        readme = """Desktop-NOMI 14 expression gallery + fixed spoken OK / 0.5.0
+        readme = """Desktop-NOMI 14 expression gallery + neural spoken OK / firmware 0.5.1
 Board: Waveshare ESP32-S3-Touch-LCD-1.85B ONLY
 Device captures audio. ASR runs LOCALLY on Windows.
-0.5.0 adds 14 distinct expressions and a fixed Chinese OK clip; playback guard temporarily suppresses microphone ASR.
+0.5.1 improves the fixed Chinese OK clip using offline neural synthesis; PC0.5.0 remains compatible; playback guard temporarily suppresses microphone ASR.
 Read docs/EXPRESSION_GALLERY.md. Test faces with start_control.cmd COM3 --silent-replies first.
 Read docs/SPOKEN_OKAY.md. Keep your installed pc/.venv and models when merging pc files.
 Read docs/USB_CHINESE_TRANSCRIPTION.md before use.

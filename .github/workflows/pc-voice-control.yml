@@ -1,8 +1,8 @@
 name: Windows local voice control
 on:
   push:
-    branches: [feat/h2-pc-voice-control, fix/h2-control-ack-session, feat/h2-spoken-okay, feat/h2-expression-gallery]
-    paths: ['shared/**', 'tools/usb_asr/**', 'docs/PC_VOICE_CONTROL.md', '.github/workflows/pc-voice-control.yml']
+    branches: [feat/h2-pc-voice-control, fix/h2-control-ack-session, feat/h2-spoken-okay, feat/h2-expression-gallery, feat/h2-natural-reply]
+    paths: ['firmware/components/nomi_audio/assets/**', 'shared/**', 'tools/usb_asr/**', 'docs/PC_VOICE_CONTROL.md', '.github/workflows/pc-voice-control.yml']
   workflow_dispatch:
 env:
   PYTHONUTF8: '1' # Match setup.cmd/start_control.cmd, including English-locale Windows runners.
