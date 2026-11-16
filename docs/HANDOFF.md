@@ -7,7 +7,7 @@
 - 新`main/voice/fixed_reply_player.h`为无分配、RX时钟驱动的共用播放内核；适配160/320/512/1024采样块，20ms写入，立体声复制/尾帧补零/100msDMA排空/300ms尾音/异常取消关PA。USB重用相同内核，PC协议和词表不改。
 - `wake_word_controller.*`新增单项播放请求队列/epoch校验/原子保护；采音唯一资源所有者开始播放，从UI接受请求起屏蔽结果，AFE继续零采样，fetch丢弃保护期结果并仅在边界清MultiNet；额外2秒排空50×1024字节AFE+VAD历史，结束恢复。清理/故障/停机取消音频并关PA，不在UI或fetch操作Codec。
 - `voice_session.h`保留ID1–11，增加12–17对应六种新表情；Wake与Extend分开，已激活重复叫名只续期。main接受Wake/Expression/Sleep时请求一次固定回复，忽略/超时/重复不回复，保护时橙点，准备好绿色或会话内蓝色。原20秒会话/5秒表情/14项demo保留。
-- 新`scripts/import_reply.py`（stdlib）接收PCM16/mono/16kHz WAV/0.1–3s，拒绝静音/数字削波/截断/错误格式，一起更新PCM/JSON/hash/NOTICE；不联网、不自动Git或烧录，不把源路径存进manifest，不推定用户素材公共许可。构建审计覆盖commands与usb_asr，长度上限96KB；commands包也含试听WAV/许可。默认资产未改，生成器仍可用于股票占位资产，用户替换后不要求安装神经模型。
+- 新`scripts/import_reply.py`（stdlib）接收PCM16/mono/16kHz WAV/0.1–3s，拒绝静音/数字削波/截断/错误格式，一起更新PCM/JSON/hash/NOTICE；不联网、不自动Git或烧录，不把源路径存进manifest，不推定用户素材公共许可。构建审计覆盖commands与usb_asr，长度上限96KB；commands包也含试听WAV/许可。默认资产未改，生成器仍可用于默认占位素材，用户替换后不要求安装神经模型。
 - 固件0.6.0、固件Actions新分支触发；新增OFFLINE_COMMAND_REPLY完整Windows烧录/14词表/音频格式/转换/替换/重建/恢复/验收文档，同步H1/H2/架构/API/路线图/计划/README。未接Wi-Fi/AI/动态TTS/触摸，API Key机制不改。
 
 ## 已执行检查
@@ -15,6 +15,13 @@
 - 本地commands初次目标编译/链接审计成功，USB初步目标构建另记；最终提交后重建/打包与云端结果补记。
 - 原生CTest8/8（新增通用播放器四种采样块、双声道相等、尾帧补零、时序、重入/失败关PA/取消；新增六表情/重复激活Extend回归）；Python构建/导入7/7、PC22/22；actionlint/diff检查通过。不是硬件测试。
 - 用户没有验证本版MultiNet准确度、全部本地短语、物理音频防回灌/栈/RAM/30分钟稳定，准确“小米同学”专用WakeNet仍不可用。当前是MultiNet有限匹配，无任意中文转录，不把ID日志冒充文字识别。不承诺否定语意理解。
+
+## 最终0.6.0交付
+
+- 实现提交fcc77c0；四profile本地ESP-IDF5.5.4最终构建/链接审计/打包全部成功，逐文件SHA256核验通过，source_dirty=false。commands包核验含mn7_cn+fst且模型>1MB，无pc目录，试听WAV与嵌入PCM逐采样一致。
+- 本地别名`firmware/dist/desktop-nomi-offline-command-reply-v0.6.0.zip`，7,593,424字节，SHA256 `5ceff20dd25b28bb16e30e7500dfd71c1f15ee77f9aedda4406a12f45c9f1617`；默认仍为用户嫌弃的0.5.1占位声音，用户新音频未收到。USB包同时构建保留作兼容回归，本次刷commands而非usb_asr。
+- GitHub [43894707716](https://github.com/zhengxiangliu6-bit/Desktop-NOMI/actions/runs/43894707716)：host_asr/native及四个ESP32S3目标全部success，四个固件Actions产物可下载。云端运行了原生8项/Python7项/PC22项和真实固定PCM软件解码；不把这些当实体MultiNet检测或扬声器听测。
+- 新增/主要变更文件清单见上节；独立分支feat/h3-offline-command-reply已推送，未创建PR/合并main/改Pages。完整OFFLINE_COMMAND_REPLY指南包含WAV类型、转换、导入三文件、构建/烧录、原厂及USB回退和硬件验收表。当前文档补充说明源码必须为当前分支，二进制ZIP本身不能直接重建。
 
 ## 下一步
 

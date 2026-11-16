@@ -61,7 +61,7 @@ ffmpeg -i D:\NOMI-audio\okay.mp3 -ar 16000 -ac 1 -c:a pcm_s16le D:\NOMI-audio\ok
 
 ## 自己替换语音并构建
 
-在有完整仓库的ESP-IDF5.5.4终端中（这不是已解压二进制包目录）：
+在有**当前feat/h3-offline-command-reply分支完整源码**的ESP-IDF5.5.4终端中（旧0.5.x源码没有导入器；这不是已解压二进制包目录）。可从[当前源码分支](https://github.com/zhengxiangliu6-bit/Desktop-NOMI/tree/feat/h3-offline-command-reply)下载Code ZIP或切换本地分支，然后按实际源码路径运行：
 
 ```bat
 cd /d D:\Desktop-NOMI
