@@ -10,6 +10,14 @@
 - 固件版本0.5.1，仍兼容PC0.5.0与现有协议，不需重新装模型/PC。build打包新增MIT许可、直接从嵌入PCM导出试听WAV（不另维护音频副本），音频长度保护仍按实际样本计算，测试改为27写帧+5DMA+15余音=47×20ms约0.94秒。播放/采音/FaceModel实现未改。
 - 新增VOICE_NEXT_PLAN：免费模型与板载资源、离线有限指令vsWi-Fi自由对话对比、规则优先/复杂语意AI、后端Key隔离、分段上传与断网回退、实施/验收顺序。只是方案，本次未加入联网/ASR/LLM/动态TTS。更新README/硬件/架构/API/路线图/表情/播报文档和两套CI分支触发。
 
+## 0.5.1交付与云端记录
+
+- 实现提交53b5d9d；初轮USB试听WAV打包因局部writer变量遮蔽输出ZIP路径失败，已在0bbebfc修复。最终usb_asr本地编译/打包及逐文件SHA256/WAV实际采样数据一致性复核成功，manifest source_commit=0bbebfc、source_dirty=false；原生音频/benchmark/commands本地也构建通过。
+- 下载别名`firmware/dist/desktop-nomi-natural-reply-v0.5.1.zip`（完整usb_asr，约4MB），SHA256 `fe43aef4f181dd6c2e3b349d75235a267207d5c9cea126917b583884233e57fd`。包内okay-preview.wav是嵌入PCM的16kHz16bit单声道WAV，不是另一套音色；licenses/MeloTTS.txt和assets/okay.json随包。可保留PC0.5.0原安装，只刷固件；回退可用0.5.0完整配套基线。
+- GitHub [Windows/Linux43891229793](https://github.com/zhengxiangliu6-bit/Desktop-NOMI/actions/runs/43891229793)全部success，覆盖新PCM真实解码、旧控制/播放保护测试。新生成器不进入PC运行环境，不需重装依赖。
+- GitHub [修复后固件43891465230](https://github.com/zhengxiangliu6-bit/Desktop-NOMI/actions/runs/43891465230)：native/host_asr/usb_asr/benchmark/commands均success，audio任务仍在运行时记录。实际交付的usb_asr云端编译/审计/产物已成功，不能把尚未结束的audio写成绿色。前次53b5d9d固件run失败保留历史，不冒充通过。
+- GitHub分支feat/h2-natural-reply包含此前全部代码，已推送；main核对仍为e06e8a9。未创建PR/合并main/改正式Pages。若用户以后要合并，使用main...feat/h2-natural-reply包含新音色；不要只合并旧gallery分支而期待得到0.5.1。
+
 ## 已执行验证与待验
 
 - 真实固定中文ASR2.0.1解码新PCM为“好的”，公开中文样本/PCM校验软件测试通过。原生CTest7/7、PC原22/22、构建Python6/6、共享目录--check、actionlint及diff检查通过。确认PC/词表/共享表情文件无diff，临时别名测试不计为交付测试。
