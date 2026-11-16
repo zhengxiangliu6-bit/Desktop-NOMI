@@ -1,3 +1,5 @@
+> 0.6.1构建可通过--reply-assets选择仓库外的固定音频目录，CMake显式嵌入该PCM、打包/审计读取同目录JSON/NOTICE；后续默认构建显式恢复默认路径，避免缓存沿用私有素材。运行时/指令/引脚不变，用户声音不进入公开Git或默认Actions。
+
 > 0.6.0将固定播放抽为采音所有权内的FixedReplyPlayer，commands和USB共用；本地MultiNet事件通过VoiceSession门控后触发表情与固定回复。保护期间AFE喂零/fetch丢弃，2秒缓冲排空后复位decoder；无网络/AI。见[离线指南](OFFLINE_COMMAND_REPLY.md)。
 
 > **0.5.1固定回应音色更新**：免费MeloTTS仅在开发时离线生成短PCM，设备不运行神经TTS；兼容PC0.5.0，不改指令/别名/20秒会话。新版实体听测待验。脱离电脑及AI决策见[方案对比](VOICE_NEXT_PLAN.md)。

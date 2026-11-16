@@ -29,9 +29,11 @@ def main():
     parser.add_argument('input',type=Path)
     parser.add_argument('--source',default='User-selected fixed reply audio')
     parser.add_argument('--license-note',default='Supplied for local project playback; no public redistribution license asserted.')
+    parser.add_argument('--output-dir',type=Path,help='Private asset folder outside Git; default replaces stock source assets')
     args=parser.parse_args()
     pcm=read_wav(args.input)
-    folder=ROOT/'components/nomi_audio/assets'
+    folder=args.output_dir if args.output_dir else ROOT/'components/nomi_audio/assets'
+    folder.mkdir(parents=True,exist_ok=True)
     meta={'text':'好的','format':'s16le','sample_rate':16000,'channels':1,'samples':len(pcm)//2,
           'bytes':len(pcm),'sha256':hashlib.sha256(pcm).hexdigest(),
           'generator':{'type':'user_selected_fixed_asset','source':args.source,

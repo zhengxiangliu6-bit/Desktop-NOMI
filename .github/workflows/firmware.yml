@@ -2,7 +2,7 @@ name: H2 local audio firmware checks
 
 on:
   push:
-    branches: [main, feat/h2-local-wakeword, feat/h2-offline-voice-commands, feat/h2-usb-chinese-transcription, fix/h2-control-ack-session, feat/h2-spoken-okay, feat/h2-expression-gallery, feat/h2-natural-reply, feat/h3-offline-command-reply]
+    branches: [main, feat/h2-local-wakeword, feat/h2-offline-voice-commands, feat/h2-usb-chinese-transcription, fix/h2-control-ack-session, feat/h2-spoken-okay, feat/h2-expression-gallery, feat/h2-natural-reply, feat/h3-offline-command-reply, feat/h3-private-reply-package]
     paths: ["shared/**", "firmware/**", "tools/usb_asr/**", "docs/USB_CHINESE_TRANSCRIPTION.md", "docs/HARDWARE_H*.md", ".github/workflows/firmware.yml"]
   pull_request:
     branches: [main]

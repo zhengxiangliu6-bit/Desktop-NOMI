@@ -1,3 +1,5 @@
+> **0.6.1支持私有音频构建**：不再需要把个人音频写入Git源码。先用`python firmware/scripts/import_reply.py 路径/okay.wav --output-dir D:/NOMI-private-reply`，再用`python firmware/scripts/build.py --profile commands --reply-assets D:/NOMI-private-reply --package`。目录可放仓库外，原文件不上传；所有素材校验及WAV试听仍执行。GitHub CI默认使用仓库占位音频，**不含用户上传声音**；用户定制包单独交付。下方原地替换方式仍可用于自己管理的源码。
+
 # 0.6.0：ESP32本地指令 → 表情 → 固定回复
 
 仅适用于Waveshare ESP32-S3-Touch-LCD-1.85B / ESP-IDF5.5.4 /16MB Flash /8MB PSRAM。独立`commands`包开机采音，在ESP32本地MultiNet7识别有限中文指令，切换14表情并由ES8311播放固定回复。不需要运行Windows程序、电脑ASR、Wi-Fi、API Key、ASR/LLM/TTS服务；串口只是可选日志。固件软件构建通过不代表实机识别/声音通过。

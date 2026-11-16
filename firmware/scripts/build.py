@@ -11,6 +11,7 @@ import sys
 import zipfile
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
+ASSETS = ROOT / "components/nomi_audio/assets"
 
 
 def source_git(*args):
@@ -47,7 +48,7 @@ def validate(build, profile):
     if sorted(names) != sorted(expected): raise ValueError(f"Wrong models: {names}")
     if len(data) > 0x400000: raise ValueError("Model partition overflow")
     if profile in ("usb_asr","commands"):
-        asset = ROOT / "components/nomi_audio/assets/okay.pcm"
+        asset = ASSETS / "okay.pcm"
         meta = json.loads(asset.with_suffix(".json").read_text(encoding="utf-8"))
         pcm = asset.read_bytes()
         if meta.get("text") != "好的" or meta.get("sample_rate") != 16000 or meta.get("channels") != 1 or meta.get("format") != "s16le" or meta.get("bytes") != len(pcm) or meta.get("samples") != len(pcm)//2 or not 0 < len(pcm) <= 96000 or len(pcm)%2 or hashlib.sha256(pcm).hexdigest() != meta["sha256"]:
@@ -96,11 +97,12 @@ def package(build, profile, config, args):
         preview=build / "okay-preview.wav"
         with wave.open(str(preview),"wb") as wav_output:
             wav_output.setnchannels(1); wav_output.setsampwidth(2); wav_output.setframerate(16000)
-            wav_output.writeframes((ROOT / "components/nomi_audio/assets/okay.pcm").read_bytes())
+            wav_output.writeframes((ASSETS / "okay.pcm").read_bytes())
         files["okay-preview.wav"]=preview
-        files["assets/okay.json"] = ROOT / "components/nomi_audio/assets/okay.json"
-        files["licenses/OKAY-ASSET.md"] = ROOT / "components/nomi_audio/assets/NOTICE.md"
-        files["licenses/MeloTTS.txt"] = ROOT / "components/nomi_audio/assets/MeloTTS-LICENSE.txt"
+        files["assets/okay.json"] = ASSETS / "okay.json"
+        files["licenses/OKAY-ASSET.md"] = ASSETS / "NOTICE.md"
+        if (ASSETS / "MeloTTS-LICENSE.txt").exists():
+            files["licenses/MeloTTS.txt"] = ASSETS / "MeloTTS-LICENSE.txt"
     if profile == "usb_asr":
         host = ROOT.parent / "tools/usb_asr"
         files["pc/VOICE_CONTROL_GUIDE.md"] = ROOT.parent / "docs/PC_VOICE_CONTROL.md"
@@ -119,6 +121,7 @@ def package(build, profile, config, args):
         "configured_activation_pinyin": built_config.get("NOMI_VOICE_WAKE_PINYIN") if profile == "commands" else None,
         "firmware_version": json.loads((build / "project_description.json").read_text(encoding="utf-8"))["project_version"],
         "voice_hardware_verified": False,
+        "custom_reply_asset": ASSETS != ROOT / "components/nomi_audio/assets",
         "asr_location": "Windows local CPU" if profile == "usb_asr" else None,
         "microphone_starts": "explicit host request with 2s heartbeat" if profile == "usb_asr" else "boot",
         "active_phrase": built_config.get("NOMI_VOICE_WAKE_LABEL") if profile == "commands" else "小爱同学 (BENCHMARK ONLY)" if profile == "benchmark" else None,
@@ -144,9 +147,9 @@ Commands: status / demo / wake off / wake on / wake reinit / wake status
 See manifest.json for offsets, SHA256 and model identity.
 '''
     if profile == "commands":
-        readme += "\nOFFLINE 0.6.0: 14 local face commands + fixed reply; no PC application needed.\nRead docs/OFFLINE_COMMAND_REPLY.md. WAV replacement needs rebuild + reflash.\n"
+        readme += "\nOFFLINE 0.6.1: 14 local face commands + fixed reply; no PC application needed.\nRead docs/OFFLINE_COMMAND_REPLY.md. WAV replacement needs rebuild + reflash.\n"
     if profile == "usb_asr":
-        readme = """Desktop-NOMI 14 expression gallery + fixed spoken OK / firmware 0.6.0
+        readme = """Desktop-NOMI 14 expression gallery + fixed spoken OK / firmware 0.6.1
 Board: Waveshare ESP32-S3-Touch-LCD-1.85B ONLY
 Device captures audio. ASR runs LOCALLY on Windows.
 0.6.0 shares the fixed player with offline commands; PC0.5.0 remains compatible; playback guard temporarily suppresses microphone ASR.
@@ -176,11 +179,16 @@ See manifest.json for file hashes and source revision.
 
 
 def main():
+    global ASSETS
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--profile", choices=("audio", "benchmark", "commands", "usb_asr"), default="audio")
     parser.add_argument("--package", action="store_true")
     parser.add_argument("--skip-prepare", action="store_true")
+    parser.add_argument("--reply-assets",type=pathlib.Path,help="Private folder with okay.pcm/okay.json/NOTICE.md; not copied into Git")
     options = parser.parse_args()
+    if options.reply_assets:
+        if options.profile not in ("commands","usb_asr"):parser.error("Custom reply requires commands or usb_asr")
+        ASSETS=options.reply_assets.resolve()
     if not options.skip_prepare:
         subprocess.run([sys.executable, str(ROOT / "scripts/prepare.py")], check=True)
     subprocess.run([sys.executable,str(ROOT / "scripts/generate_faces.py"),"--check"],check=True)
@@ -191,7 +199,7 @@ def main():
     if options.profile != "audio":
         defaults += ";" + str(ROOT / ("sdkconfig." + options.profile))
     subprocess.run([sys.executable, str(idf), "-B", str(build), "-D", f"SDKCONFIG={config}",
-                    "-D", f"SDKCONFIG_DEFAULTS={defaults}", "build", "size"], cwd=ROOT, check=True)
+                    "-D", f"SDKCONFIG_DEFAULTS={defaults}", "-D", f"NOMI_REPLY_ASSET_DIR={ASSETS.as_posix()}", "build", "size"], cwd=ROOT, check=True)
     args = validate(build, options.profile)
     if options.package:
         package(build, options.profile, config, args)

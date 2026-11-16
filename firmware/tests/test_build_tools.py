@@ -77,5 +77,19 @@ class BuildAuditTest(unittest.TestCase):
         self.write()
         with self.assertRaises(ValueError): self.audit()
 
+    def test_private_asset_hash_is_audited_instead_of_stock(self):
+        import hashlib
+        assets=self.root/'private';assets.mkdir()
+        pcm=b'\x64\x00'*4000
+        (assets/'okay.pcm').write_bytes(pcm)
+        meta={'text':'好的','format':'s16le','sample_rate':16000,'channels':1,
+              'bytes':len(pcm),'samples':len(pcm)//2,'sha256':hashlib.sha256(pcm).hexdigest()}
+        (assets/'okay.json').write_text(json.dumps(meta))
+        self.config['NOMI_USB_ASR']=True;self.write()
+        with patch.object(build_tool,'ASSETS',assets):
+            self.audit('usb_asr')
+            (assets/'okay.pcm').write_bytes(pcm[:-2])
+            with self.assertRaises(ValueError):self.audit('usb_asr')
+
 
 if __name__ == "__main__": unittest.main()

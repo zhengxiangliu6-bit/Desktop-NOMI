@@ -20,3 +20,19 @@ class ImportReplyTests(unittest.TestCase):
                     with self.assertRaises(ValueError):module.read_wav(p)
             p.write_bytes(b'not a WAV; do not rename MP3')
             with self.assertRaises((wave.Error,EOFError)):module.read_wav(p)
+
+    def test_private_output_does_not_change_stock_asset_or_copy_source_path(self):
+        from unittest.mock import patch
+        import json,hashlib
+        stock=module.ROOT/'components/nomi_audio/assets/okay.pcm'
+        before=hashlib.sha256(stock.read_bytes()).hexdigest()
+        with tempfile.TemporaryDirectory() as temp:
+            source=Path(temp)/'input.wav';out=Path(temp)/'private'
+            with wave.open(str(source),'wb') as w:
+                w.setnchannels(1);w.setsampwidth(2);w.setframerate(16000);w.writeframes(b'\x64\x00'*4000)
+            with patch('sys.argv',['import_reply.py',str(source),'--output-dir',str(out)]):module.main()
+            meta=json.loads((out/'okay.json').read_text())
+            self.assertEqual(meta['bytes'],8000)
+            self.assertNotIn(str(source),json.dumps(meta))
+            self.assertEqual(hashlib.sha256(stock.read_bytes()).hexdigest(),before)
+            self.assertEqual(sorted(x.name for x in out.iterdir()),['NOTICE.md','okay.json','okay.pcm'])
