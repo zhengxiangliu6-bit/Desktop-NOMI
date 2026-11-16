@@ -83,7 +83,7 @@ class ControlReaderTests(unittest.TestCase):
         reader.run()
         self.assertIsNone(reader.error)
         self.assertEqual(reader.parser.frames,1)
-        self.assertTrue(any(b'00000001 happy' in w for w in port.writes))
+        self.assertTrue(any(b'00000001 happy 1' in w for w in port.writes))
         self.assertEqual(port.writes[-2:],[b'idle\r\n',b'stream off\r\n'])
         self.assertTrue(any(x[0]=='设备确认' for x in reports))
 

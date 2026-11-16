@@ -1,7 +1,7 @@
 name: Windows local voice control
 on:
   push:
-    branches: [feat/h2-pc-voice-control, fix/h2-control-ack-session]
+    branches: [feat/h2-pc-voice-control, fix/h2-control-ack-session, feat/h2-spoken-okay]
     paths: ['tools/usb_asr/**', 'docs/PC_VOICE_CONTROL.md', '.github/workflows/pc-voice-control.yml']
   workflow_dispatch:
 env:
@@ -27,7 +27,7 @@ jobs:
       - name: Decode public Chinese sample (software only, not a hardware test)
         run: |
           python tools/usb_asr/setup_model.py
-          python tools/usb_asr/smoke_test.py
+          python tools/usb_asr/smoke_test.py --okay-asset firmware/components/nomi_audio/assets/okay.pcm
   package:
     needs: software
     runs-on: ubuntu-latest
@@ -40,6 +40,6 @@ jobs:
         run: python tools/usb_asr/package_pc.py
       - uses: actions/upload-artifact@v4
         with:
-          name: desktop-nomi-pc-voice-control-v0.4.2
-          path: tools/usb_asr/dist/desktop-nomi-pc-voice-control-v0.4.2.zip
+          name: desktop-nomi-pc-voice-control-v0.4.3
+          path: tools/usb_asr/dist/desktop-nomi-pc-voice-control-v0.4.3.zip
           if-no-files-found: error

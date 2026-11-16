@@ -13,6 +13,9 @@ public:
     esp_err_t open();
     esp_err_t read(int16_t *stereo, size_t bytes, size_t *received);
     void close();
+    esp_err_t speaker_begin();
+    esp_err_t speaker_write(const int16_t *stereo, size_t bytes);
+    void speaker_end();
     uint32_t overflows() const { return overflows_.load(); }
 private:
     static bool overflow(i2s_chan_handle_t, i2s_event_data_t *, void *context);

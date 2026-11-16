@@ -13,16 +13,16 @@ inline bool remote_face(const char *cmd) {
 }
 class RemoteControl {
 public:
-    RemoteReply apply(uint32_t token, uint32_t seq, const char *cmd, uint64_t now, bool valid_session) {
+    RemoteReply apply(uint32_t token, uint32_t seq, const char *cmd, uint64_t now, bool valid_session, bool spoken=false) {
         if (!token || !valid_session) return {"STALE"};
         if (!remote_face(cmd) && std::strcmp(cmd,"probe") && std::strcmp(cmd,"extend")) return {"INVALID"};
         const bool new_token=token!=token_;
         if (new_token) { token_=token; have_seq_=false; until_=feedback_=0; }
         if (have_seq_ && seq <= sequence_) {
-            if (seq == sequence_ && !std::strcmp(command_,cmd)) return {status_}; // No replay side effects or TTL renewal.
+            if (seq == sequence_ && !std::strcmp(command_,cmd) && spoken==spoken_) return {status_}; // No replay side effects or TTL renewal.
             return {"STALE"};
         }
-        sequence_=seq; have_seq_=true; std::snprintf(command_,sizeof(command_),"%s",cmd);
+        sequence_=seq; have_seq_=true; spoken_=spoken; std::snprintf(command_,sizeof(command_),"%s",cmd);
         status_="OK";
         if (!std::strcmp(cmd,"probe")) return {status_,new_token?RemoteEffect::Reset:RemoteEffect::None};
         if (!std::strcmp(cmd,"extend")) {
@@ -42,7 +42,7 @@ public:
     uint32_t token() const { return token_; }
 private:
     uint32_t token_=0, sequence_=0;
-    bool have_seq_=false;
+    bool have_seq_=false, spoken_=false;
     uint64_t until_=0, feedback_=0;
     char command_[12]{};
     const char *status_="OK";

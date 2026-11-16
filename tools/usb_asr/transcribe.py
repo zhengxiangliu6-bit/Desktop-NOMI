@@ -12,6 +12,7 @@ from protocol import FrameParser, ProtocolError
 from setup_model import verify_model
 from voice_control import VoiceControl, route_result
 from command_channel import CommandChannel
+from recognition_gate import RecognitionGate
 
 
 PRINT_LOCK = threading.Lock()
@@ -62,7 +63,7 @@ class BoardReader(threading.Thread):
                     pcm = self.parser.parse(bytes(line).strip())
                     if pcm is not None:
                         try:
-                            self.output.put_nowait((time.monotonic(), pcm))
+                            self.output.put_nowait((time.monotonic(), pcm, self.parser.guarded))
                         except queue.Full:
                             raise ProtocolError('电脑识别处理跟不上：音频积压超过0.5秒，已停止，不丢帧继续识别')
                         deadline = time.monotonic()+2
@@ -103,7 +104,7 @@ def main(argv=None):
         sys.stdout.reconfigure(encoding='utf-8', errors='replace')
     from recognizer import ChineseRecognizer
     import serial
-    out('版本', 'PC语音控制0.4.2；需要配套USB采音固件0.4.2（编号回执）。')
+    out('版本', 'PC语音控制0.4.3；需要配套固件0.4.3（固定“好的”回应）。')
     out('准备', '加载电脑本地中文模型；音频来自ESP32板载麦克风，不上传、不保存录音或转录。')
     recognizer = ChineseRecognizer(verify_model(), args.threads)
     input('按 Enter 开始麦克风采集；Ctrl+C 停止：')
@@ -117,7 +118,8 @@ def main(argv=None):
         reader = BoardReader(port, token, args.mic, frames, stop, channel)
         reader.start()
         out('状态', f'已请求 {args.port} / 板载MIC{args.mic}。')
-        out('控制', f'已启用：先说“{args.wake_name}”或“你好{args.wake_name}”，看到设备确认后再说表情指令。' if control else '纯转录模式：不需要唤醒，不执行表情。')
+        out('控制', f'已启用：先说“{args.wake_name}”或“你好{args.wake_name}”，看到设备确认并听完“好的”、恢复识别后再说表情指令。' if control else '纯转录模式：不需要唤醒，不执行表情。')
+        recognition_gate=RecognitionGate(out)
         last_level = time.monotonic()
         total_frames = energy = peak = clips = 0
         last_text = time.monotonic()
@@ -126,9 +128,9 @@ def main(argv=None):
                 if control:
                     decision = control.tick(time.monotonic())
                     if decision:
-                        channel.submit(decision.command, decision.reason)
+                        channel.submit(decision.command, decision.reason, spoken=False)
                 try:
-                    at, pcm = frames.get(timeout=0.2)
+                    at, pcm, guarded = frames.get(timeout=0.2)
                 except queue.Empty:
                     continue
                 if time.monotonic()-at > 0.5:
@@ -138,7 +140,7 @@ def main(argv=None):
                 energy += sum(x*x for x in samples)
                 clips += sum(abs(x) >= 32760 for x in samples)
                 total_frames += 1
-                for kind, text in recognizer.feed(pcm):
+                for kind, text in recognition_gate.feed(recognizer,pcm,guarded):
                     out(kind, text)
                     if kind in ('临时','最终'): last_text = time.monotonic()
                     if control:

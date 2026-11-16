@@ -1,3 +1,31 @@
+# 0.4.3：板载固定语音回应“好的”
+
+用户反馈最新0.4.2效果很好，保留为可用基线（未逐项补报全部异常/30分钟验收）；本次明确要求板载扬声器在执行指令时简单说“好的”。授权范围扩为固定短音频反馈，不接云端/运行时完整TTS/自由对话，不改变Windows本地ASR依赖，不保存用户录音。
+
+## 方案与硬件核对
+
+- 从干净`fix/h2-control-ack-session` / `0f4e79a`创建独立`feat/h2-spoken-okay`，不创建PR、不合并main，不改原厂备份或执行自动擦除。
+- 官方Waveshare1.85B固定提交5a98b8da1948340c07032a408ac0d93c47ca558f已核对06_mic_test/BSP：ES8311 DAC、PA GPIO9默认非反转（高启用）、I2S1 MCLK2/BCLK48/WS38/DOUT47/DIN39。沿用现有16kHz/PCM16/stereo时钟，不照搬其它板、不重开24kHz影响采音。
+- 固件内置固定合成“好的”，15,766字节/7883采样/492.6875ms；开发时eSpeak NG1.52.0 cmn/rate150、espeakng-loader0.2.4、FFmpeg7.1.5离线生成/归一化。此为用户新固定回应需求的构建资源，不是用户录音、不克隆真人。PCM与来源/格式/SHA256/NOTICE随源码，生成器不进入运行环境，不补造引擎许可。
+- 采音任务独占DAC操作：音量60/100、DAC解静音、GPIO9高；分20ms立体声同样本块直接写已有TX，UI不阻塞。播完留约100ms DMA排空再低PA/静音，300ms余音保护；失败/停止/断线清理也关闭功放。实际响度/音质未听测。
+- 保持RX和连续帧，保护区间NOMI2 flags=1、实际mic数据替换为零；PC在保护开始/结束重置ASR且不喂入保护帧。基础半双工，不做AEC/打断；约0.9秒内用户说话也忽略，听完并恢复识别后再说下一条。
+
+## 行为和协议
+
+- 明确接受的人声唤醒/表情/休息回应一次；extend重复叫名、自动超时idle、probe/拒绝/清理不回应。重复同编号不再次触发动作或音频。
+- ctl新增spoken=0/1字段；RemoteControl缓存包含该标志。NOMI_ACK1确认动作，NOMI_SAY1 START/DONE/ERROR单独报告数字输出流程，不代表物理扬声器听测成功。NOMI2 flags纳入FNV校验，不伪装连续真实mic数据。
+- 必须固件/PC0.4.3成对更新；旧固件不能通过新控制握手。原模型锁/requirements/venv不变，不重新setup/下载模型。
+
+## 文件及已执行验证
+
+- 固件：AudioInput增加speaker_begin/write/end；component CMake嵌入assets/okay.pcm及json/NOTICE，scripts/generate_okay.py仅开发复现；新playback_guard.h和测试，修改USB stream/remote/main/pcm frame、版本/构建审计/打包。原引脚、采样率、FaceModel、模型与Web API/Pages/密钥机制未变。
+- PC：新增recognition_gate.py和test_spoken_reply.py，调整protocol/recognizer/command_channel/transcribe/voice_control（超时late-final静音）/smoke_test/package及相关测试；setup与依赖不变。文档新增SPOKEN_OKAY，更新PC说明、README/架构/API/路线图及本交接。
+- 本地PC单元20/20、原生CTest7/7、Python构建审计6/6；固定PCM在真实本地ASR解码成“好的”，公开样本软件链路也通过；actionlint/语法检查通过。usb_asr目标链接已通过；初次嵌入符号路径按IDF实际导出_binary_okay_pcm_*修正后通过，不宣称初次失败为成功。
+- 验证涵盖保护期不送ASR/重置/标志校验、仅人声指令播放、超时/重复不播、I2S块数/排空/尾音/取消、状态/表情/编号协议回归。**不能验证ES8311实际出声、音量/爆音/音质、真实声学回灌抑制、实际DMA/USB稳定性或30分钟硬件运行**。
+- Windows软件和固件CI/最终ZIP结果记录在交付节。第一轮用户实测应只唤醒听一次“好的”，等恢复再说“开心一点”；没有声音时看SAY START/DONE/ERROR和设备错误，不把数字DONE当听测通过。
+
+---
+
 # 0.4.2：Listening后台回执超时修复
 
 用户0.4.1上传日志有两次PC`listening`确认1.5秒超时。第二次发生于新唤醒词临时结果，尚未提交新唤醒；第一段已激活重复唤醒曾成功，后续后台刷新才超时。因此不能归因于“重复唤醒直接崩溃”，也未看到足够设备重启证据。普通日志缺失/无法重组的具体成因未实机确认，不伪称已定位某个硬件故障。不提交用户原始日志、完整对话或音频。

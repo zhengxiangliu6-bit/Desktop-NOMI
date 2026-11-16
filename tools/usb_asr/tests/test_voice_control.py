@@ -82,7 +82,7 @@ class ChannelTests(unittest.TestCase):
         self.now=0;self.events=[];self.written=[]
         self.c=CommandChannel(lambda:self.now,lambda *v:self.events.append(v),123)
         self.c.tick(self.written.append)
-        self.assertIn(b'00000000 probe',self.written[-1])
+        self.assertIn(b'00000000 probe 0',self.written[-1])
         self.c.observe(ack(123,0,'probe'))
 
     def test_matches_token_sequence_command_and_checksum(self):
@@ -119,7 +119,7 @@ class ChannelTests(unittest.TestCase):
         c.tick(self.written.append)
         c.observe(b'nomi: Command accepted: listening (5s TTL)')
         self.now=1.6
-        with self.assertRaisesRegex(ProtocolError,'0.4.2'):c.tick(self.written.append)
+        with self.assertRaisesRegex(ProtocolError,'0.4.3'):c.tick(self.written.append)
 
 
 if __name__=='__main__':unittest.main()

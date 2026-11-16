@@ -60,7 +60,7 @@ esp_err_t AudioInput::open()
         adc_if_ = es7210_codec_new(&adc_cfg);
         es8311_codec_cfg_t dac_cfg = {};
         dac_cfg.ctrl_if = dac_ctrl_; dac_cfg.gpio_if = gpio_;
-        // Driver must never enable the PA, even during codec open/close.
+        // Keep codec from enabling PA on open/close. Only explicit playback controls it.
         dac_cfg.codec_mode = ESP_CODEC_DEV_WORK_MODE_DAC; dac_cfg.pa_pin = GPIO_NUM_NC;
         dac_cfg.use_mclk = true; dac_cfg.hw_gain.pa_voltage = 5.f; dac_cfg.hw_gain.codec_dac_voltage = 3.3f;
         dac_if_ = es8311_codec_new(&dac_cfg);
@@ -95,9 +95,30 @@ esp_err_t AudioInput::read(int16_t *pcm, size_t bytes, size_t *received)
     if (!rx_ || !pcm || !received || bytes % 4) return ESP_ERR_INVALID_ARG;
     return i2s_channel_read(rx_, pcm, bytes, received, 100);
 }
+esp_err_t AudioInput::speaker_begin()
+{
+    if (!dac_ || !tx_) return ESP_ERR_INVALID_STATE;
+    ESP_RETURN_ON_ERROR(codec_result(esp_codec_dev_set_out_vol(dac_,60)), TAG, "Speaker volume");
+    ESP_RETURN_ON_ERROR(codec_result(esp_codec_dev_set_out_mute(dac_,false)), TAG, "Speaker unmute");
+    const auto result=gpio_set_level(PA,1); // Same-board ES8311 BSP active-high amplifier.
+    if (result!=ESP_OK) speaker_end();
+    return result;
+}
+esp_err_t AudioInput::speaker_write(const int16_t *stereo, size_t bytes)
+{
+    if (!tx_ || !stereo || bytes%4) return ESP_ERR_INVALID_ARG;
+    size_t written=0;
+    auto result=i2s_channel_write(tx_,stereo,bytes,&written,20);
+    return result==ESP_OK && written==bytes ? ESP_OK : ESP_FAIL;
+}
+void AudioInput::speaker_end()
+{
+    gpio_set_level(PA,0);
+    if (dac_) esp_codec_dev_set_out_mute(dac_,true);
+}
 void AudioInput::close()
 {
-    gpio_set_level(PA, 0);
+    speaker_end();
     if (adc_) { esp_codec_dev_close(adc_); esp_codec_dev_delete(adc_); adc_ = nullptr; }
     if (dac_) { esp_codec_dev_set_out_mute(dac_, true); esp_codec_dev_close(dac_); esp_codec_dev_delete(dac_); dac_ = nullptr; }
     if (adc_if_) { audio_codec_delete_codec_if(adc_if_); adc_if_ = nullptr; }

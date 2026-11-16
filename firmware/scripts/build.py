@@ -46,6 +46,12 @@ def validate(build, profile):
     expected = {"audio": [], "usb_asr": [], "benchmark": ["wn9_xiaoaitongxue"], "commands": ["mn7_cn", "fst"]}[profile]
     if sorted(names) != sorted(expected): raise ValueError(f"Wrong models: {names}")
     if len(data) > 0x400000: raise ValueError("Model partition overflow")
+    if profile == "usb_asr":
+        asset = ROOT / "components/nomi_audio/assets/okay.pcm"
+        meta = json.loads(asset.with_suffix(".json").read_text(encoding="utf-8"))
+        pcm = asset.read_bytes()
+        if meta.get("text") != "好的" or meta.get("sample_rate") != 16000 or meta.get("channels") != 1 or meta.get("format") != "s16le" or meta.get("bytes") != len(pcm) or meta.get("samples") != len(pcm)//2 or not 0 < len(pcm) <= 32000 or len(pcm)%2 or hashlib.sha256(pcm).hexdigest() != meta["sha256"]:
+            raise ValueError("Fixed reply asset format/hash mismatch")
     args = json.loads((build / "flasher_args.json").read_text(encoding="utf-8"))
     offsets = {int(k, 0) for k in args["flash_files"]}
     if offsets != {0, 0x8000, 0x10000, 0x410000}:
@@ -81,11 +87,14 @@ def package(build, profile, config, args):
         "H2-NOTICE.md": "components/nomi_audio/NOTICE.md",
     }.items():
         files["licenses/" + name] = ROOT / path
-    for name in ("HARDWARE_H2.md", "HARDWARE_H1.md", "HARDWARE_VOICE.md", "USB_CHINESE_TRANSCRIPTION.md", "PC_VOICE_CONTROL.md"):
+    for name in ("HARDWARE_H2.md", "HARDWARE_H1.md", "HARDWARE_VOICE.md", "USB_CHINESE_TRANSCRIPTION.md", "PC_VOICE_CONTROL.md", "SPOKEN_OKAY.md"):
         files["docs/" + name] = ROOT.parent / "docs" / name
     if profile == "usb_asr":
+        files["assets/okay.json"] = ROOT / "components/nomi_audio/assets/okay.json"
+        files["licenses/OKAY-ASSET.md"] = ROOT / "components/nomi_audio/assets/NOTICE.md"
         host = ROOT.parent / "tools/usb_asr"
         files["pc/VOICE_CONTROL_GUIDE.md"] = ROOT.parent / "docs/PC_VOICE_CONTROL.md"
+        files["pc/SPOKEN_OKAY_GUIDE.md"] = ROOT.parent / "docs/SPOKEN_OKAY.md"
         for path in host.iterdir():
             if path.is_file() and path.suffix in (".py", ".cmd", ".txt", ".json", ".md"):
                 files["pc/" + path.name] = path
@@ -124,10 +133,11 @@ Commands: status / demo / wake off / wake on / wake reinit / wake status
 See manifest.json for offsets, SHA256 and model identity.
 '''
     if profile == "usb_asr":
-        readme = """Desktop-NOMI USB audio and numbered control ACK / 0.4.2
+        readme = """Desktop-NOMI fixed spoken OK feedback / 0.4.3
 Board: Waveshare ESP32-S3-Touch-LCD-1.85B ONLY
 Device captures audio. ASR runs LOCALLY on Windows.
-0.4.2 PC control uses checksummed session/sequence ACKs and device-owned 20s Listening.
+0.4.3 adds a fixed Chinese OK clip; playback guard temporarily suppresses microphone ASR.
+Read docs/SPOKEN_OKAY.md. Keep your installed pc/.venv and models when merging pc files.
 Read docs/USB_CHINESE_TRANSCRIPTION.md before use.
 Flash all files with the supplied flash_args, no full-chip erase:
   python -m esptool --chip esp32s3 --port COM3 --baud 460800 write_flash "@flash_args"

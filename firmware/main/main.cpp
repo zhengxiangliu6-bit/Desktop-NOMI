@@ -86,9 +86,9 @@ void command(const char *text, uint64_t now)
     if (!std::strcmp(text, "stream off") || !std::strcmp(text, "wake off")) { usb_audio.off(); return; }
     if (!std::strcmp(text, "stream status")) { usb_audio.status(); return; }
     unsigned long token = 0; unsigned mic = 0; char tail = 0;
-    unsigned long seq = 0; char action[12]{};
-    if (std::sscanf(text,"ctl %8lx %8lx %11s %c",&token,&seq,action,&tail)==3) {
-        auto reply=remote_control.apply(uint32_t(token),uint32_t(seq),action,now,usb_audio.session_active(uint32_t(token)));
+    unsigned long seq = 0; char action[12]{}; unsigned spoken=0;
+    if (std::sscanf(text,"ctl %8lx %8lx %11s %u %c",&token,&seq,action,&spoken,&tail)==4 && spoken<=1) {
+        auto reply=remote_control.apply(uint32_t(token),uint32_t(seq),action,now,usb_audio.session_active(uint32_t(token)),spoken!=0);
         if (reply.effect!=nomi::RemoteEffect::None) {
             wake_latch.clear(); voice_session.reset(now); voice_hold=false; demo=false;
             model.reset(now);
@@ -97,7 +97,7 @@ void command(const char *text, uint64_t now)
         char ack[120];
         const auto length=nomi::encode_control_ack(ack,sizeof(ack),uint32_t(token),uint32_t(seq),action,reply.status);
         // Queue without blocking UI. The capture owner sends each ACK in one driver call.
-        if (length) usb_audio.reply(ack,length);
+        if (length) usb_audio.reply(ack,length,spoken && reply.effect==nomi::RemoteEffect::Face,uint32_t(token),uint32_t(seq));
         return;
     }
 

@@ -84,4 +84,4 @@ def route_result(kind, text, control, submit, report, now, stopped=False):
     decision = control.final(text, now)
     report('接受' if decision.command and decision.accepted else '忽略', decision.reason)
     if decision.command:
-        submit(decision.command, decision.reason)
+        submit(decision.command, decision.reason, decision.accepted)

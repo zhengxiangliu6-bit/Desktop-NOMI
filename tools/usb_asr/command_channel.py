@@ -5,6 +5,7 @@ import re
 from voice_control import ALLOWED_COMMANDS
 from protocol import ProtocolError, checksum
 
+SAY=re.compile(rb'^@NOMI_SAY1 ([0-9a-f]{8}) ([0-9a-f]{8}) (START|DONE|ERROR|BUSY) ([0-9a-f]{8})$')
 ACK=re.compile(rb'^@NOMI_ACK1 ([0-9a-f]{8}) ([0-9a-f]{8}) ([a-z]+) ([A-Z]+) ([0-9a-f]{8})$')
 
 
@@ -13,6 +14,7 @@ class Request:
     command: str
     reason: str
     at: float
+    spoken: bool=False
 
 
 class CommandChannel:
@@ -25,16 +27,16 @@ class CommandChannel:
         self.sequence=0
         self.ready=False
 
-    def submit(self, command, reason):
+    def submit(self, command, reason, spoken=True):
         if command not in ALLOWED_COMMANDS: raise ValueError('Unsupported board command')
-        try:self.requests.put_nowait(Request(command,reason,self.clock()))
+        try:self.requests.put_nowait(Request(command,reason,self.clock(),bool(spoken and command!='extend')))
         except queue.Full as error:raise ProtocolError('表情指令队列已满，停止控制') from error
 
     def tick(self, write):
         now=self.clock()
         if self.pending:
             if now-self.sent_at>1.5:
-                stage='需要配套0.4.2固件；协议握手' if self.pending.command=='probe' else self.pending.command
+                stage='需要配套0.4.3固件；协议握手' if self.pending.command=='probe' else self.pending.command
                 raise ProtocolError(f'设备未在1.5秒内确认 {stage}；不能宣称已执行')
             return
         if not self.ready:request=Request('probe','确认编号回执协议',now)
@@ -43,11 +45,20 @@ class CommandChannel:
             except queue.Empty:return
             if now-request.at>1:raise ProtocolError('表情指令积压超过1秒，停止而不执行过期动作')
         self.pending,self.sent_at=request,now
-        write(f'ctl {self.token:08x} {self.sequence:08x} {request.command}\r\n'.encode('ascii'))
+        write(f'ctl {self.token:08x} {self.sequence:08x} {request.command} {int(request.spoken)}\r\n'.encode('ascii'))
         if request.command!='probe':self.touched=True
         self.report('发送',f'{request.command} #{self.sequence}；{request.reason}；等待编号回执')
 
     def observe(self, fragment):
+        speech=SAY.fullmatch(fragment.strip())
+        if speech:
+            token,seq,event,digest=speech.groups()
+            if int(token,16)!=self.token:return
+            if checksum(self.token,int(seq,16),0,event)!=int(digest,16):raise ProtocolError('回应事件校验失败')
+            labels={b'START':'固定“好的”开始输出',b'DONE':'固定音频输出与保护期结束（实际声音请听扬声器）',b'ERROR':'扬声器播放错误',b'BUSY':'上一条回应尚未完成，本条未插播'}
+            self.report('回应',f'#{int(seq,16)} {labels[event]}')
+            if event==b'ERROR':raise ProtocolError('设备固定回应播放失败，已停止本轮')
+            return
         match=ACK.fullmatch(fragment.strip())
         if not match:return # Logs, including legacy ACK text, have no control authority.
         token,seq,command,status,digest=match.groups()
@@ -59,6 +70,6 @@ class CommandChannel:
         if seq!=self.sequence or command.decode()!=self.pending.command:raise ProtocolError('控制回执编号/动作不一致')
         if status!=b'OK':raise ProtocolError(f'设备拒绝指令：{status.decode()}')
         if self.pending.command=='probe':
-            self.ready=True;self.report('设备确认','0.4.2编号回执协议就绪')
+            self.ready=True;self.report('设备确认','0.4.3编号回执及固定回应协议就绪')
         else:self.report('设备确认',f'已接受 {self.pending.command} #{seq}（请观察实际屏幕效果）')
         self.pending=None;self.sequence+=1

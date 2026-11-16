@@ -1,0 +1,17 @@
+{
+  "text": "好的",
+  "format": "s16le",
+  "sample_rate": 16000,
+  "channels": 1,
+  "samples": 7883,
+  "bytes": 15766,
+  "sha256": "532a99528a4f4848cbaf7a180495b06aac9b623bc5cf5749ee8dd6e3cebcb768",
+  "generator": {
+    "loader": "espeakng-loader 0.2.4",
+    "engine": "1.52.0",
+    "voice": "cmn",
+    "rate": 150,
+    "processing": "ffmpeg resample 16000 mono, loudnorm I=-23 TP=-6 LRA=5"
+  },
+  "provenance": "Project-generated from fixed literal text; not a user recording or cloned human voice"
+}

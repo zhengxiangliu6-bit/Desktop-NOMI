@@ -8,7 +8,8 @@ int main() {
     char line[1024];
     const auto n=nomi::encode_frame(line,sizeof(line),0x12345678,0,1,pcm,nomi::stream_samples);
     assert(n>850 && n<1024 && line[n-1]=='\n' && line[n]==0);
-    assert(!std::strncmp(line,"\n@NOMI1 12345678 00000000 1 ",28));
+    assert(!std::strncmp(line,"\n@NOMI2 12345678 00000000 1 0 ",30));
+    assert(!std::strncmp(line,"\n@NOMI2 12345678 00000000 1 0 655d00f4 ",39));
     assert(std::strstr(line,"AAABAP//AID/fw")); // PCM16 little-endian extrema base64
     assert(!nomi::encode_frame(line,100,1,0,1,pcm,320));
     assert(!nomi::encode_frame(line,1024,1,0,3,pcm,320));

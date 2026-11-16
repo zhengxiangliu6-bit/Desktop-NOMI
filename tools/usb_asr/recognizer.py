@@ -13,6 +13,10 @@ class ChineseRecognizer:
         self.stream = self.engine.create_stream()
         self.previous = ''
 
+    def reset(self):
+        self.engine.reset(self.stream)
+        self.previous=''
+
     def feed(self, pcm):
         samples = np.frombuffer(pcm, dtype='<i2').astype(np.float32)/32768.0
         self.stream.accept_waveform(16000, samples)
