@@ -94,9 +94,9 @@ def package(build, profile, config, args):
         # Export the exact embedded PCM as a listenable WAV, without a second source asset.
         import wave
         preview=build / "okay-preview.wav"
-        with wave.open(str(preview),"wb") as output:
-            output.setnchannels(1); output.setsampwidth(2); output.setframerate(16000)
-            output.writeframes((ROOT / "components/nomi_audio/assets/okay.pcm").read_bytes())
+        with wave.open(str(preview),"wb") as wav_output:
+            wav_output.setnchannels(1); wav_output.setsampwidth(2); wav_output.setframerate(16000)
+            wav_output.writeframes((ROOT / "components/nomi_audio/assets/okay.pcm").read_bytes())
         files["okay-preview.wav"]=preview
         files["assets/okay.json"] = ROOT / "components/nomi_audio/assets/okay.json"
         files["licenses/OKAY-ASSET.md"] = ROOT / "components/nomi_audio/assets/NOTICE.md"
