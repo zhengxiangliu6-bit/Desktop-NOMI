@@ -1,3 +1,5 @@
+> 0.6.2为本地识别增加诊断与有界分数校准；门槛请求由UI传递，模型清理/配置仍仅推理任务所有，UI读取已应用原子值。日志只报有限词表模型候选，不输出捕获PCM或自由对话。
+
 > 0.6.1构建可通过--reply-assets选择仓库外的固定音频目录，CMake显式嵌入该PCM、打包/审计读取同目录JSON/NOTICE；后续默认构建显式恢复默认路径，避免缓存沿用私有素材。运行时/指令/引脚不变，用户声音不进入公开Git或默认Actions。
 
 > 0.6.0将固定播放抽为采音所有权内的FixedReplyPlayer，commands和USB共用；本地MultiNet事件通过VoiceSession门控后触发表情与固定回复。保护期间AFE喂零/fetch丢弃，2秒缓冲排空后复位decoder；无网络/AI。见[离线指南](OFFLINE_COMMAND_REPLY.md)。

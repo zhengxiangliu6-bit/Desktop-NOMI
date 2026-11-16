@@ -1,3 +1,15 @@
+# 当前0.6.2：本地未激活的诊断与门槛校准
+
+用户0.6.1实测绿色但叫名无反应。两次状态约13.23秒内frames/blocks/fetched增413、vad_speech增244，timeouts/overflows/dropped为0，无重启证据；这里旧timeouts为采音无数据，不是模型超时。仅能确认数据/推理循环持续运行，不证明有效激活。不能把问题归因用户发音或烧录失败，不保存用户原日志/音频。
+
+- 从干净0e8544b创建fix/h3-local-command-diagnostics，不创建PR/合并main。检查固定ESP-SR源码确认中文拼音接口仍适用、输入16k/PCM16/mono契约未发现证据性错误。旧模型与UI均硬编码0.90且无识别统计；高门槛只是待检验因素，不能声称已找到根因。
+- command_recognizer增加DETECTED候选ID/配置标签/分数（1秒限频）和检测/模型TIMEOUT/低分拒绝计数，status可查看；不读取模型未承诺状态下的get_results，不输出原始字符串冒充转录。没有返回候选时只报计数，last_score明确为历史值。
+- 新voice threshold N，30–95临时校准；默认仍90，建议实体单次试60获得证据。请求原子传推理任务，set_det_threshold/clean都在owner内执行，VoiceSession接收门槛改为读取同一已应用值；变更结束UI会话，过时事件由cutoff隔离。重启90，reinit保留本轮设定；未改用户词表/音频/引脚/20秒会话/USB协议。分数不是百分比准确率，也没证明60是正式可用门槛。
+- 文件：main/voice/command_recognizer.*、voice_session.h、wake_controller.*、main、原生门控测试；版本0.6.2、构建包说明/CI触发及OFFLINE/API/架构/路线图。本轮用户声音沿用仓库外私有素材，公开Git/Actions不含声音。
+- 已执行CTest8/8（增加默认0.90拒绝/0.60接受与低分、非法门槛拒绝）、Python9/9、actionlint/diff检查；commands目标初编译审计通过。提交后最终私有包/源码和完整目标检查另记。未声称硬件唤醒或0.60校准成功；下一步要用户一次测试候选与模型超时统计，若无候选继续查模型链路，若有则分别看ID/分数/会话接受，不盲目继续降低。
+
+---
+
 # 当前0.6.1：用户选定固定回复的私有烧录包
 
 用户上传okay.mp3，明确延续“替换占位声音并打包”的工作。原MP3及转换音频只在本次本地定制构建使用，不提交公开Git/Actions；不以泛化的代码推送授权推定可以公开个人声音。独立分支feat/h3-private-reply-package来自干净204717b，不创建PR/合并main。

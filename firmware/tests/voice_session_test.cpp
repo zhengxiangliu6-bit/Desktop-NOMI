@@ -7,6 +7,12 @@ int main() {
     auto send = [&](int id, uint64_t at, float p=0.95f, uint32_t epoch=1, bool demo=false) {
         return s.accept({epoch,id,p,at},1,at,demo);
     };
+    VoiceSession calibrated;
+    assert(calibrated.accept({1,1,0.65f,10},1,10,false)==VoiceAction::Ignore);
+    assert(calibrated.accept({1,1,0.65f,20},1,20,false,0.60f)==VoiceAction::Wake);
+    assert(calibrated.accept({1,2,0.59f,30},1,30,false,0.60f)==VoiceAction::Ignore);
+    assert(calibrated.accept({1,2,0.65f,40},1,40,false,0.60f)==VoiceAction::Expression);
+    assert(calibrated.accept({1,1,0.99f,50},1,50,false,0.1f)==VoiceAction::Ignore);
     // Expressions cannot bypass activation; failed activation doesn't open a window.
     assert(send(2,100)==VoiceAction::Ignore);
     assert(send(1,200,0.89f)==VoiceAction::Ignore);

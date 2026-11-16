@@ -292,6 +292,7 @@ void WakeWordController::status() const
              (unsigned long)peak_[0].load(), (unsigned long)rms_[0].load(), (unsigned long)clipped_[0].load(),
              (unsigned long)peak_[1].load(), (unsigned long)rms_[1].load(), (unsigned long)clipped_[1].load());
 #if CONFIG_NOMI_VOICE_COMMANDS
+    recognizer_.status();
     ESP_LOGI(TAG, "MULTINET frames=%lu wake=%s", (unsigned long)recognizer_.frames(), CONFIG_NOMI_VOICE_WAKE_LABEL);
 #endif
     // Snapshot includes AFE's own tasks and both idle tasks, not just our two workers.

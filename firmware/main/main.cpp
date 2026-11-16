@@ -83,6 +83,16 @@ void status()
 void command(const char *text, uint64_t now)
 {
     if (!std::strcmp(text, "status")) { status(); return; }
+#if CONFIG_NOMI_VOICE_COMMANDS
+    unsigned score=0;char extra=0;
+    if(!std::strncmp(text,"voice threshold",15)) {
+        if(std::sscanf(text,"voice threshold %u %c",&score,&extra)!=1 || !wake.request_threshold(score)) {
+            ESP_LOGW(TAG,"Use voice threshold N, N=30..95; model score, not accuracy");return;
+        }
+        voice_session.reset(now);voice_hold=false;model.reset(now);
+        ESP_LOGI(TAG,"Threshold requested=%u; wait for VOICE_THRESHOLD_APPLIED; session reset; volatile until reboot",score);return;
+    }
+#endif
 #if CONFIG_NOMI_USB_ASR
     if (!std::strcmp(text, "stream off") || !std::strcmp(text, "wake off")) { usb_audio.off(); return; }
     if (!std::strcmp(text, "stream status")) { usb_audio.status(); return; }
@@ -208,7 +218,7 @@ extern "C" void app_main()
         nomi::VoiceEvent voice_event;
         while (wake.poll_voice(voice_event)) {
             now = now_ms(); // Serial output may have yielded while inference queued a newer event.
-            const auto action = voice_session.accept(voice_event, wake.epoch(), now, demo || wake.faulted());
+            const auto action = voice_session.accept(voice_event, wake.epoch(), now, demo || wake.faulted(),wake.threshold());
             if (action == nomi::VoiceAction::Wake) {
                 wake_latch.clear(); model.reset(now); voice_hold = true;
                 wake.say_okay(voice_event.epoch);

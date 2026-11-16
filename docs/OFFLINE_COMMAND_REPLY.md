@@ -1,3 +1,9 @@
+> **0.6.2校准诊断版**：0.6.1用户日志显示采音/AFE/MultiNet帧持续增加，但未报告激活。现有证据不能确定根因；旧代码模型与UI两层0.90门槛是待检验因素，不是已证明原因。新版默认仍0.90，新增`voice threshold 60`临时设置模型和会话门槛到0.60（不是60%准确率），在推理任务应用并清旧decoder；重启恢复0.90，wake reinit沿用本轮设置。范围30–95，不自动保存。改变门槛会结束当前会话，等待`VOICE_THRESHOLD_APPLIED`再说话。
+
+> 调试输出：`VOICE_CANDIDATE`只打印模型实际DETECTED时最高候选的配置ID/标签/分数（限每秒一条），不是任意中文转录；没有结果时不编造候选。`wake status`新增`MN_DIAGNOSTIC`的detected/timeouts/below_gate/last_id/last_score/active_threshold/requested。last_id/last_score是历史最后候选，不能当成本句识别。
+
+> 本次测试：烧录专门的0.6.2私有声音诊断包→打开miniterm→`voice threshold 60`→确认APPLIED→说一次“小米同学”→`wake status`。回报这段候选/接受或拒绝/诊断计数。不要自行反复降到很低门槛；若能激活还需安静、旁人讲话和近似词负样本测试，再决定正式门槛。本版用于校准定位，不宣称已修好实体唤醒。用户声音仍只在私有构建，公开CI用默认素材。
+
 > **0.6.1支持私有音频构建**：不再需要把个人音频写入Git源码。先用`python firmware/scripts/import_reply.py 路径/okay.wav --output-dir D:/NOMI-private-reply`，再用`python firmware/scripts/build.py --profile commands --reply-assets D:/NOMI-private-reply --package`。目录可放仓库外，原文件不上传；所有素材校验及WAV试听仍执行。GitHub CI默认使用仓库占位音频，**不含用户上传声音**；用户定制包单独交付。下方原地替换方式仍可用于自己管理的源码。
 
 # 0.6.0：ESP32本地指令 → 表情 → 固定回复

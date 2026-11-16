@@ -23,6 +23,20 @@ public:
     bool faulted() const { return failed_.load(); }
     void status() const;
     bool say_okay(uint32_t epoch);
+    bool request_threshold(unsigned score) {
+#if CONFIG_NOMI_VOICE_COMMANDS
+        return recognizer_.request_threshold(score);
+#else
+        (void)score;return false;
+#endif
+    }
+    float threshold() const {
+#if CONFIG_NOMI_VOICE_COMMANDS
+        return recognizer_.threshold();
+#else
+        return 0.90f;
+#endif
+    }
     bool voice_guarded() const {
 #if CONFIG_NOMI_VOICE_COMMANDS
         return reply_muted_.load();

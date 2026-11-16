@@ -14,6 +14,9 @@ public:
     void reset(); // Fetch-task owner only; discard decoder history across playback.
     void close(); // Only after the fetch worker has stopped.
     bool consume(const int16_t *pcm, size_t samples, QueueHandle_t events, uint32_t epoch);
+    bool request_threshold(unsigned score) { if(score<30 || score>95)return false;requested_=score;return true; }
+    float threshold() const { return float(active_.load())/100.f; }
+    void status() const;
     uint32_t frames() const { return frames_.load(); }
 private:
     const esp_mn_iface_t *mn_ = nullptr;
@@ -21,7 +24,12 @@ private:
     bool commands_allocated_ = false;
     int16_t *buffer_ = nullptr;
     size_t chunk_ = 0, used_ = 0;
-    std::atomic<uint32_t> frames_{0};
+    std::atomic<uint32_t> frames_{0}, detections_{0}, timeouts_{0}, rejected_{0};
+    std::atomic<unsigned> requested_{90},active_{90};
+    std::atomic<int> candidate_id_{0};
+    std::atomic<float> candidate_score_{0};
+    uint64_t last_report_=0; // inference task only
+    void report_result(const esp_mn_results_t *result,const char *source);
 };
 }
 #endif

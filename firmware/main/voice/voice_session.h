@@ -38,9 +38,9 @@ public:
         if (until_ && now >= until_) { reset(now); return VoiceAction::Timeout; }
         return VoiceAction::Ignore;
     }
-    VoiceAction accept(VoiceEvent e, uint32_t epoch, uint64_t now, bool demo) {
+    VoiceAction accept(VoiceEvent e, uint32_t epoch, uint64_t now, bool demo, float minimum=0.90f) {
         if (demo || e.epoch != epoch || e.at_ms <= cutoff_ || e.at_ms > now ||
-            now-e.at_ms > 1500 || !std::isfinite(e.probability) || e.probability < 0.90f ||
+            now-e.at_ms > 1500 || !std::isfinite(e.probability) || !std::isfinite(minimum) || minimum<0.30f || minimum>0.95f || e.probability < minimum ||
             e.probability > 1.0f || (last_id_ && e.at_ms < last_at_) || (e.id != 1 && !voice_command(e.id))) return VoiceAction::Ignore;
         if (e.id == last_id_ && e.at_ms-last_at_ < 1200) return VoiceAction::Ignore;
         if (e.id != 1 && (!listening(now) || !listening(e.at_ms))) return VoiceAction::Ignore;

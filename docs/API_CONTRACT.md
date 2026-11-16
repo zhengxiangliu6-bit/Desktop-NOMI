@@ -1,3 +1,5 @@
+> 0.6.2本地调试命令voice threshold N（30..95）通过原子请求交推理任务应用，VoiceSession使用相同已应用值，变更先结束会话并清decoder；默认90，重启复原，不存NVS。增加DETECTED候选与状态计数，只输出配置标签，不当逐字转录。USB协议/PC词表/20秒逻辑不改。
+
 > 0.6.0 commands新增本地表情ID12–17：angry/surprised/sleepy/wink/love/confused，原ID1–11保留；VoiceAction::Extend仅内部状态，不重复播放/重置表情。串口LOCAL_REPLY_START/DONE是固定流程日志而非中文逐字转录。USB0.5.0控制/音频协议保持兼容，未改PC词表。见[离线指南](OFFLINE_COMMAND_REPLY.md)。
 
 > 0.5.1只有固定PCM音色和来源变化，沿用0.5.0能力/控制/保护协议。PC程序和词表保持0.5.0；不加“回到待基”别名，不改原始识别文字。
