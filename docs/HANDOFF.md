@@ -1,3 +1,28 @@
+# 当前0.5.0：14表情、对应静态图库、可静音测试的固定回应
+
+用户在测试“好的”之前要求超过10种不重复且明显不同的表情、语音/串口切换、原GitHub静态页可看对应效果，并确认代码上传和合并方法。独立分支`feat/h2-expression-gallery`从已推送`70a7d81 feat/h2-spoken-okay`创建；main仍为e06e8a9，包含此前所有H1/H2提交的最终分支可一次合并。不自动创建PR、合并main或部署正式Pages。
+
+## 实现与文件
+
+- `shared/expressions.json`14造型和严格语音别名；`firmware/scripts/generate_faces.py`生成`firmware/main/face_catalog.h`、`tools/usb_asr/face_catalog.py`、`frontend/src/features/hardware/expressions.generated.ts`，prepare/build及Pages检查生成文件同步。
+- 固件`face_model.*`、`face_view.*`、main、remote_control：保留8种并新增angry/surprised/sleepy/wink/love/confused；眉毛/眼型/嘴型/泪水/爱心/符号明显区分，LVGL矢量、180ms插值、圆屏安全半径160。demo依次14项，串口命令保留，状态逻辑独立；remote指令目录共享。0.5.0 probeall握手拒绝旧8表情能力。
+- PC`voice_control`、`command_channel`、`transcribe`、`package_pc`及测试：全部14种别名可达，新增--silent-replies强制spoken=0，保持ASR/模型/依赖与20秒会话、编号回执/幂等机制。默认声音包含此前0.4.3实现，新版需配套固件更新。
+- Web`src/features/hardware/`SVG图库、选择/重播/轮播/中文短语；App/header/styles入口和Pages浏览器测试。原聊天/Aora/后端/API Key机制不改，预览不控制设备。新增网页和固件实际LVGL造型同目录，动画时序/抗锯齿不保证逐像素相同。
+- 三个Actions工作流支持最终分支；Pages功能分支只编译测试和静态审阅artifact，main才部署。新增EXPRESSION_GALLERY，更新H1/H2、PC、SPOKEN_OKAY、README/架构/API/路线图；所有原厂备份未触碰，无整片擦除。
+
+## 已执行验证与待办
+
+- 原生CTest7/7（含14张真实LVGL渲染、半径160安全区、91对至少500不同像素、14命令可达、状态/音频/回执/播放保护回归）。PC单元22/22，含所有目录语音别名及静音标记；构建审计Python6/6；generate_faces --check、actionlint、git diff --check通过。
+- 前端typecheck/build通过；Vitest70/70，常规桌面/手机浏览器2/2、Pages子路径与图库浏览器2/2。手动查看桌面和390px手机截图；原Mock入口/资源刷新/无网络调用回归通过。现有Aora大chunk告警仍存在，不妨碍构建。
+- USB目标初步编译已通过；提交后将对四profile重新构建、打包并检查CI，结果另补交付记录。下载包必须显示source_dirty=false；不将源码检查当实体测试。
+- 新14种实体屏幕/新别名Windows实测、固定“好的”实际出声/音质/爆音/防回灌、30分钟稳定性均待用户验收。0.4.2用户报告效果很好是旧基线证据；没有“小米同学”专用WakeNet模型，本版仍需Windows本地ASR。
+
+## 用户下一步与恢复
+
+[EXPRESSION_GALLERY](EXPRESSION_GALLERY.md)提供14项指令、0.5.0成对烧录/PC合并、先--silent-replies后听测、最终分支合并main发布Pages的具体步骤。旧venv/models保留，不需setup。可回到已验证0.4.2配套包；原厂恢复见HARDWARE_H1。GitHub代码推送/CI和包哈希在最终交付补记，不宣称正式Pages已更新。
+
+---
+
 # 0.4.3：板载固定语音回应“好的”
 
 用户反馈最新0.4.2效果很好，保留为可用基线（未逐项补报全部异常/30分钟验收）；本次明确要求板载扬声器在执行指令时简单说“好的”。授权范围扩为固定短音频反馈，不接云端/运行时完整TTS/自由对话，不改变Windows本地ASR依赖，不保存用户录音。

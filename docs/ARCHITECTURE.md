@@ -1,3 +1,5 @@
+> 0.5.0硬件表情目录改为shared/expressions.json，生成C++/PC/TS消费者。14种LVGL矢量表情与Web独立SVG图库对应；不扩展后端聊天情绪API。Web仍纯Mock，PC本地ASR，远端语音会话独立于FaceModel。 详见[表情指南](EXPRESSION_GALLERY.md)。
+
 # 技术架构（V0 目标设计）
 
 > 新增0.4.3 [板载固定“好的”回应](SPOKEN_OKAY.md)：ES8311/GPIO9、短PCM、播放保护，不接动态TTS/云端。固件与PC成对更新，原ASR模型不变，实体扬声器和回灌抑制待验证。

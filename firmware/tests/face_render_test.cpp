@@ -1,4 +1,6 @@
 #include "face_model.h"
+#include "face_catalog.h"
+#include <vector>
 #include "face_view.h"
 #include <array>
 #include <cstdio>
@@ -30,8 +32,9 @@ int main()
     lv_display_set_flush_cb(d, flush);
     nomi::FaceView view; view.create();
     nomi::FaceModel model;
-    std::array<uint8_t, 360 * 360 * 3> previous{};
-    for (auto name : {"idle", "blink", "happy", "sad", "curious", "thinking", "listening", "speaking"}) {
+    std::vector<std::array<uint8_t, 360 * 360 * 3>> rendered;
+    for (const auto &design:nomi::face_designs) {
+        auto name=design.command;
         model.reset(0); model.command(name, 0); model.update(0);
         auto frame = model.update(!std::strcmp(name, "blink") ? 70 : 200);
         view.render(frame, model.phase());
@@ -46,8 +49,12 @@ int main()
             }
         }
         check(ink > 500, "empty face");
-        check(pixels != previous, "consecutive expressions are visually identical");
-        previous = pixels;
+        for(const auto &prior:rendered) {
+            unsigned different=0;
+            for(size_t i=0;i<pixels.size();i+=3) if(std::memcmp(pixels.data()+i,prior.data()+i,3))++different;
+            check(different>500,"two expressions differ by <=500 rendered pixels");
+        }
+        rendered.push_back(pixels);
         char path[64]; std::snprintf(path, sizeof(path), "%s.ppm", name);
         auto *out = std::fopen(path, "wb"); check(out, "cannot save render");
         std::fprintf(out, "P6\n360 360\n255\n");

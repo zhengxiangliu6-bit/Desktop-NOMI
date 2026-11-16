@@ -1,4 +1,5 @@
 #include "face_model.h"
+#include "face_catalog.h"
 #include "face_view.h"
 #include "wake_word_controller.h"
 #include "nomi_panel.h"
@@ -60,7 +61,7 @@ void update_voice_indicator(uint64_t now, bool demo_active) {
 bool demo = false;
 unsigned demo_step = 0;
 uint64_t demo_at = 0;
-const char *const sequence[] = {"idle", "blink", "happy", "sad", "curious", "thinking", "listening", "speaking"};
+const auto &sequence = nomi::face_designs;
 void status()
 {
 #if CONFIG_NOMI_USB_ASR
@@ -180,7 +181,7 @@ extern "C" void app_main()
     update_voice_indicator(now_ms(), false);
 #endif
     nomi_panel_show();
-    ESP_LOGI(TAG, "Commands + Enter: idle blink happy sad curious thinking listening speaking demo status");
+    ESP_LOGI(TAG, "Commands + Enter: idle blink happy sad curious thinking listening speaking angry surprised sleepy wink love confused demo status");
 #if CONFIG_NOMI_USB_ASR
     usb_audio.start();
 #else
@@ -245,8 +246,8 @@ extern "C" void app_main()
             } else {
                 // Isolated previews: previous phase/emotion cannot mask the next one.
                 model.reset(now);
-                model.command(sequence[demo_step], now);
-                ESP_LOGI(TAG, "Demo: %s", sequence[demo_step++]);
+                model.command(sequence[demo_step].command, now);
+                ESP_LOGI(TAG, "Demo: %s", sequence[demo_step++].command);
                 demo_at = now + 3000;
             }
         }

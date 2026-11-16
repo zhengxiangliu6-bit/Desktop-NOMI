@@ -1,3 +1,4 @@
+import { HardwareGallery } from "../features/hardware/HardwareGallery";
 import { ChatPanel } from "../features/conversation/ChatPanel";
 import { DebugPanel } from "../features/robot/DebugPanel";
 import { RobotView } from "../features/robot/RobotView";
@@ -39,6 +40,7 @@ export function App() {
             Desktop<span className="brand-light"> / </span>NOMI
           </span>
         </a>
+        <a href="#hardware-expressions" className="hardware-nav">圆屏表情</a>
         <span className="mock-badge">
           <span />
           {config.mode === "mock"
@@ -94,6 +96,7 @@ export function App() {
           onPreview={preview}
           onError={debugError}
         />
+        <HardwareGallery />
       </main>
       <footer>
         <span>

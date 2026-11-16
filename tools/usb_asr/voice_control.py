@@ -3,13 +3,10 @@ from dataclasses import dataclass
 import math
 import unicodedata
 
-FACES = {
-    '开心一点': 'happy', '开心一下': 'happy', '难过一点': 'sad', '难过一下': 'sad', '眨一下眼': 'blink', '眨眼一下': 'blink',
-    '好奇一点': 'curious', '思考一下': 'thinking', '认真听讲': 'listening',
-    '说话表情': 'speaking',
-}
+from face_catalog import FACE_COMMANDS, VOICE_FACES
+FACES = VOICE_FACES
 SLEEP = {'休息一下', '回到待机'}
-ALLOWED_COMMANDS = frozenset({'idle', 'blink', 'happy', 'sad', 'curious', 'thinking', 'listening', 'speaking', 'extend'})
+ALLOWED_COMMANDS = frozenset((*FACE_COMMANDS, 'extend'))
 
 
 def normalize(text):

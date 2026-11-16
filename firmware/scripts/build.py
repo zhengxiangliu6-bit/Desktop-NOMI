@@ -78,6 +78,7 @@ def package(build, profile, config, args):
     for name in ("flash_args", "flasher_args.json", "desktop_nomi_h2.elf", "desktop_nomi_h2.map"):
         files[name] = build / name
     files["sdkconfig"] = config
+    files["expressions.json"] = ROOT.parent / "shared/expressions.json"
     files["dependencies.lock.json"] = ROOT / "dependencies.lock.json"
     for name, path in {
         "ESP-SR.txt": ".deps/esp-sr/LICENSE", "ESP-DSP.txt": ".deps/espressif__esp-dsp/LICENSE",
@@ -87,13 +88,14 @@ def package(build, profile, config, args):
         "H2-NOTICE.md": "components/nomi_audio/NOTICE.md",
     }.items():
         files["licenses/" + name] = ROOT / path
-    for name in ("HARDWARE_H2.md", "HARDWARE_H1.md", "HARDWARE_VOICE.md", "USB_CHINESE_TRANSCRIPTION.md", "PC_VOICE_CONTROL.md", "SPOKEN_OKAY.md"):
+    for name in ("HARDWARE_H2.md", "HARDWARE_H1.md", "HARDWARE_VOICE.md", "USB_CHINESE_TRANSCRIPTION.md", "PC_VOICE_CONTROL.md", "SPOKEN_OKAY.md", "EXPRESSION_GALLERY.md"):
         files["docs/" + name] = ROOT.parent / "docs" / name
     if profile == "usb_asr":
         files["assets/okay.json"] = ROOT / "components/nomi_audio/assets/okay.json"
         files["licenses/OKAY-ASSET.md"] = ROOT / "components/nomi_audio/assets/NOTICE.md"
         host = ROOT.parent / "tools/usb_asr"
         files["pc/VOICE_CONTROL_GUIDE.md"] = ROOT.parent / "docs/PC_VOICE_CONTROL.md"
+        files["pc/EXPRESSION_GUIDE.md"] = ROOT.parent / "docs/EXPRESSION_GALLERY.md"
         files["pc/SPOKEN_OKAY_GUIDE.md"] = ROOT.parent / "docs/SPOKEN_OKAY.md"
         for path in host.iterdir():
             if path.is_file() and path.suffix in (".py", ".cmd", ".txt", ".json", ".md"):
@@ -133,10 +135,11 @@ Commands: status / demo / wake off / wake on / wake reinit / wake status
 See manifest.json for offsets, SHA256 and model identity.
 '''
     if profile == "usb_asr":
-        readme = """Desktop-NOMI fixed spoken OK feedback / 0.4.3
+        readme = """Desktop-NOMI 14 expression gallery + fixed spoken OK / 0.5.0
 Board: Waveshare ESP32-S3-Touch-LCD-1.85B ONLY
 Device captures audio. ASR runs LOCALLY on Windows.
-0.4.3 adds a fixed Chinese OK clip; playback guard temporarily suppresses microphone ASR.
+0.5.0 adds 14 distinct expressions and a fixed Chinese OK clip; playback guard temporarily suppresses microphone ASR.
+Read docs/EXPRESSION_GALLERY.md. Test faces with start_control.cmd COM3 --silent-replies first.
 Read docs/SPOKEN_OKAY.md. Keep your installed pc/.venv and models when merging pc files.
 Read docs/USB_CHINESE_TRANSCRIPTION.md before use.
 Flash all files with the supplied flash_args, no full-chip erase:
@@ -169,6 +172,7 @@ def main():
     options = parser.parse_args()
     if not options.skip_prepare:
         subprocess.run([sys.executable, str(ROOT / "scripts/prepare.py")], check=True)
+    subprocess.run([sys.executable,str(ROOT / "scripts/generate_faces.py"),"--check"],check=True)
     idf = pathlib.Path(os.environ["IDF_PATH"]) / "tools/idf.py"
     build = ROOT / ("build-" + options.profile)
     config = ROOT / ("sdkconfig." + options.profile + ".local")

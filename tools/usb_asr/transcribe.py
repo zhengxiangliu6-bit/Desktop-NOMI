@@ -97,6 +97,7 @@ def main(argv=None):
     parser.add_argument('--port', default='COM3')
     parser.add_argument('--mic', type=int, choices=(1,2), default=1)
     parser.add_argument('--voice-control', action='store_true', help='仅最终中文结果触发表情；默认仍为纯转录')
+    parser.add_argument('--silent-replies',action='store_true',help='仅切换表情，关闭固定好的回应，便于先测表情')
     parser.add_argument('--wake-name', default='小米同学')
     parser.add_argument('--threads', type=int, choices=range(1,9), default=2)
     args = parser.parse_args(argv)
@@ -104,13 +105,13 @@ def main(argv=None):
         sys.stdout.reconfigure(encoding='utf-8', errors='replace')
     from recognizer import ChineseRecognizer
     import serial
-    out('版本', 'PC语音控制0.4.3；需要配套固件0.4.3（固定“好的”回应）。')
+    out('版本', 'PC语音控制0.5.0；需要配套14表情固件0.5.0。')
     out('准备', '加载电脑本地中文模型；音频来自ESP32板载麦克风，不上传、不保存录音或转录。')
     recognizer = ChineseRecognizer(verify_model(), args.threads)
     input('按 Enter 开始麦克风采集；Ctrl+C 停止：')
     control = VoiceControl(args.wake_name) if args.voice_control else None
     token = secrets.randbelow(0xffffffff)+1
-    channel = CommandChannel(time.monotonic, out, token) if control else None
+    channel = CommandChannel(time.monotonic, out, token, spoken_enabled=not args.silent_replies) if control else None
     stop = threading.Event()
     frames = queue.Queue(maxsize=25) # 500ms total queued audio, never unbounded retention.
     with serial.Serial(args.port, 115200, timeout=0.05, write_timeout=0.5) as port:

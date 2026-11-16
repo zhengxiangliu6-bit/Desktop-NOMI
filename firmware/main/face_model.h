@@ -3,18 +3,20 @@
 #include <string_view>
 
 namespace nomi {
-enum class Emotion { Neutral, Happy, Sad, Curious };
+enum class Emotion { Neutral, Happy, Sad, Curious, Angry, Surprised, Sleepy, Wink, Love, Confused };
 enum class Phase { Idle, Thinking, Listening, Speaking };
-enum class View { Idle, Blink, Happy, Sad, Curious, Thinking, Listening, Speaking };
+enum class View { Idle, Blink, Happy, Sad, Curious, Thinking, Listening, Speaking, Angry, Surprised, Sleepy, Wink, Love, Confused };
 struct Pose {
     float left_height = 64, right_height = 64;
     float gaze_x = 0, gaze_y = 0, mouth_curve = 5, mouth_open = 0;
+    float left_width = 38, right_width = 38, brow_left = 0, brow_right = 0, brow_raise = 0, brow_opa = 0;
 };
 struct Frame {
     Pose pose;
     View view;
     float blink = 0; // 0 open, 1 closed; overlays, never changes emotion/phase.
     float activity = 0;
+    View expression = View::Idle;
 };
 // Single owner, monotonic milliseconds. No allocations, timers, I/O or LVGL here.
 class FaceModel {

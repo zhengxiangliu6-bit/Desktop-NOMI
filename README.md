@@ -1,3 +1,5 @@
+> **当前0.5.0：14种明显不同的圆屏表情、网页图库、可静音测试的固定回应。** 见[完整指令、成对升级与Pages合并步骤](docs/EXPRESSION_GALLERY.md)。固件/PC均需0.5.0；先运行`start_control.cmd COM3 --silent-replies`测试表情，再去掉静音参数听“好的”。新增实体效果待验收；下方版本段落保留历史记录。
+
 # Desktop-NOMI
 
 > 新增0.4.3 [板载固定“好的”回应](docs/SPOKEN_OKAY.md)：ES8311/GPIO9、短PCM、播放保护，不接动态TTS/云端。固件与PC成对更新，原ASR模型不变，实体扬声器和回灌抑制待验证。

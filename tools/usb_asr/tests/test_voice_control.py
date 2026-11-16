@@ -82,8 +82,8 @@ class ChannelTests(unittest.TestCase):
         self.now=0;self.events=[];self.written=[]
         self.c=CommandChannel(lambda:self.now,lambda *v:self.events.append(v),123)
         self.c.tick(self.written.append)
-        self.assertIn(b'00000000 probe 0',self.written[-1])
-        self.c.observe(ack(123,0,'probe'))
+        self.assertIn(b'00000000 probeall 0',self.written[-1])
+        self.c.observe(ack(123,0,'probeall'))
 
     def test_matches_token_sequence_command_and_checksum(self):
         self.c.submit('listening','wake');self.c.tick(self.written.append)
@@ -119,7 +119,19 @@ class ChannelTests(unittest.TestCase):
         c.tick(self.written.append)
         c.observe(b'nomi: Command accepted: listening (5s TTL)')
         self.now=1.6
-        with self.assertRaisesRegex(ProtocolError,'0.4.3'):c.tick(self.written.append)
+        with self.assertRaisesRegex(ProtocolError,'0.5.0'):c.tick(self.written.append)
 
 
 if __name__=='__main__':unittest.main()
+
+class CatalogTests(unittest.TestCase):
+    def test_every_catalog_voice_alias_routes_to_its_face(self):
+        import json
+        from face_catalog import FACE_COMMANDS
+        catalog=json.loads((Path(__file__).resolve().parents[3]/'shared/expressions.json').read_text())['expressions']
+        self.assertEqual(len(FACE_COMMANDS),14)
+        self.assertEqual(set(FACE_COMMANDS),{x['command'] for x in catalog})
+        for item in catalog:
+            for phrase in item['voices']:
+                c=VoiceControl();c.final('小米同学',0)
+                self.assertEqual(c.final(phrase,2).command,item['command'],phrase)

@@ -72,7 +72,7 @@ class ControlReaderTests(unittest.TestCase):
                 if not self.sent:
                     self.sent=True
                     from test_voice_control import ack
-                    return frame()+ack(0x12345678,0,'probe')+b'\n'
+                    return frame()+ack(0x12345678,0,'probeall')+b'\n'
                 if channel.pending and channel.pending.command=='happy':
                     from test_voice_control import ack
                     self.happy=True

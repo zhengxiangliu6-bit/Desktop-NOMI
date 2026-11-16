@@ -18,8 +18,10 @@ class Request:
 
 
 class CommandChannel:
-    def __init__(self, clock, report, token):
+    PROBE='probeall'
+    def __init__(self, clock, report, token, spoken_enabled=True):
         self.clock,self.report,self.token=clock,report,token
+        self.spoken_enabled=spoken_enabled
         self.requests=queue.Queue(maxsize=8)
         self.pending=None
         self.sent_at=0.0
@@ -29,24 +31,24 @@ class CommandChannel:
 
     def submit(self, command, reason, spoken=True):
         if command not in ALLOWED_COMMANDS: raise ValueError('Unsupported board command')
-        try:self.requests.put_nowait(Request(command,reason,self.clock(),bool(spoken and command!='extend')))
+        try:self.requests.put_nowait(Request(command,reason,self.clock(),bool(spoken and command!='extend' and self.spoken_enabled)))
         except queue.Full as error:raise ProtocolError('表情指令队列已满，停止控制') from error
 
     def tick(self, write):
         now=self.clock()
         if self.pending:
             if now-self.sent_at>1.5:
-                stage='需要配套0.4.3固件；协议握手' if self.pending.command=='probe' else self.pending.command
+                stage='需要配套0.5.0固件；协议握手' if self.pending.command==self.PROBE else self.pending.command
                 raise ProtocolError(f'设备未在1.5秒内确认 {stage}；不能宣称已执行')
             return
-        if not self.ready:request=Request('probe','确认编号回执协议',now)
+        if not self.ready:request=Request(self.PROBE,'确认14种表情与编号回执协议',now)
         else:
             try:request=self.requests.get_nowait()
             except queue.Empty:return
             if now-request.at>1:raise ProtocolError('表情指令积压超过1秒，停止而不执行过期动作')
         self.pending,self.sent_at=request,now
         write(f'ctl {self.token:08x} {self.sequence:08x} {request.command} {int(request.spoken)}\r\n'.encode('ascii'))
-        if request.command!='probe':self.touched=True
+        if request.command!=self.PROBE:self.touched=True
         self.report('发送',f'{request.command} #{self.sequence}；{request.reason}；等待编号回执')
 
     def observe(self, fragment):
@@ -69,7 +71,7 @@ class CommandChannel:
         if not self.pending or seq<self.sequence:return # Duplicate/late response cannot confirm a newer command.
         if seq!=self.sequence or command.decode()!=self.pending.command:raise ProtocolError('控制回执编号/动作不一致')
         if status!=b'OK':raise ProtocolError(f'设备拒绝指令：{status.decode()}')
-        if self.pending.command=='probe':
-            self.ready=True;self.report('设备确认','0.4.3编号回执及固定回应协议就绪')
+        if self.pending.command==self.PROBE:
+            self.ready=True;self.report('设备确认','0.5.0：14种表情、编号回执及固定回应协议就绪')
         else:self.report('设备确认',f'已接受 {self.pending.command} #{seq}（请观察实际屏幕效果）')
         self.pending=None;self.sequence+=1

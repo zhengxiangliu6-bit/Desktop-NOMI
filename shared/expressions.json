@@ -1,0 +1,367 @@
+{
+  "schema": 1,
+  "canvas": 360,
+  "safe_radius": 160,
+  "expressions": [
+    {
+      "command": "idle",
+      "label": "待机",
+      "voices": [
+        "回到待机",
+        "休息一下"
+      ],
+      "description": "自然竖眼、轻微笑，自动眨眼",
+      "pose": {
+        "left_height": 64,
+        "right_height": 64,
+        "gaze_x": 0,
+        "gaze_y": 0,
+        "mouth_curve": 5,
+        "mouth_open": 0,
+        "left_width": 38,
+        "right_width": 38,
+        "brow_left": 0,
+        "brow_right": 0,
+        "brow_raise": 0,
+        "brow_opa": 0
+      },
+      "eyes": "normal",
+      "decor": "none",
+      "mouth": "curve"
+    },
+    {
+      "command": "blink",
+      "label": "眨眼",
+      "voices": [
+        "眨一下眼",
+        "眨眼一下"
+      ],
+      "description": "双眼快速闭合再睁开",
+      "pose": {
+        "left_height": 64,
+        "right_height": 64,
+        "gaze_x": 0,
+        "gaze_y": 0,
+        "mouth_curve": 5,
+        "mouth_open": 0,
+        "left_width": 38,
+        "right_width": 38,
+        "brow_left": 0,
+        "brow_right": 0,
+        "brow_raise": 0,
+        "brow_opa": 0
+      },
+      "eyes": "normal",
+      "decor": "none",
+      "mouth": "curve"
+    },
+    {
+      "command": "happy",
+      "label": "开心",
+      "voices": [
+        "开心一点",
+        "开心一下"
+      ],
+      "description": "弯弯笑眼与大笑嘴",
+      "pose": {
+        "left_height": 18,
+        "right_height": 18,
+        "gaze_x": 0,
+        "gaze_y": 0,
+        "mouth_curve": 26,
+        "mouth_open": 0,
+        "left_width": 58,
+        "right_width": 58,
+        "brow_left": 0,
+        "brow_right": 0,
+        "brow_raise": 0,
+        "brow_opa": 0
+      },
+      "eyes": "smile",
+      "decor": "none",
+      "mouth": "curve"
+    },
+    {
+      "command": "sad",
+      "label": "难过",
+      "voices": [
+        "难过一点",
+        "难过一下"
+      ],
+      "description": "内侧抬眉、下垂视线、蓝色眼泪",
+      "pose": {
+        "left_height": 34,
+        "right_height": 34,
+        "gaze_x": 0,
+        "gaze_y": 14,
+        "mouth_curve": -24,
+        "mouth_open": 0,
+        "left_width": 44,
+        "right_width": 44,
+        "brow_left": -22,
+        "brow_right": 22,
+        "brow_raise": 0,
+        "brow_opa": 1
+      },
+      "eyes": "normal",
+      "decor": "tears",
+      "mouth": "curve"
+    },
+    {
+      "command": "curious",
+      "label": "好奇",
+      "voices": [
+        "好奇一点"
+      ],
+      "description": "左眼大右眼小、向右看",
+      "pose": {
+        "left_height": 86,
+        "right_height": 28,
+        "gaze_x": 14,
+        "gaze_y": 0,
+        "mouth_curve": 2,
+        "mouth_open": 0,
+        "left_width": 44,
+        "right_width": 44,
+        "brow_left": -10,
+        "brow_right": 8,
+        "brow_raise": 0,
+        "brow_opa": 1
+      },
+      "eyes": "normal",
+      "decor": "none",
+      "mouth": "curve"
+    },
+    {
+      "command": "thinking",
+      "label": "思考",
+      "voices": [
+        "思考一下"
+      ],
+      "description": "向左上看、嘴平、三个思考点",
+      "pose": {
+        "left_height": 42,
+        "right_height": 42,
+        "gaze_x": -18,
+        "gaze_y": -18,
+        "mouth_curve": 0,
+        "mouth_open": 0,
+        "left_width": 34,
+        "right_width": 34,
+        "brow_left": 0,
+        "brow_right": 0,
+        "brow_raise": 0,
+        "brow_opa": 0
+      },
+      "eyes": "normal",
+      "decor": "dots",
+      "mouth": "curve"
+    },
+    {
+      "command": "listening",
+      "label": "聆听",
+      "voices": [
+        "认真听讲"
+      ],
+      "description": "双眼睁大，外圈呼吸光环",
+      "pose": {
+        "left_height": 80,
+        "right_height": 80,
+        "gaze_x": 0,
+        "gaze_y": 0,
+        "mouth_curve": 2,
+        "mouth_open": 0,
+        "left_width": 48,
+        "right_width": 48,
+        "brow_left": 0,
+        "brow_right": 0,
+        "brow_raise": 0,
+        "brow_opa": 0
+      },
+      "eyes": "normal",
+      "decor": "ring",
+      "mouth": "curve"
+    },
+    {
+      "command": "speaking",
+      "label": "说话",
+      "voices": [
+        "说话表情"
+      ],
+      "description": "眼睛正常，嘴巴持续开合",
+      "pose": {
+        "left_height": 54,
+        "right_height": 54,
+        "gaze_x": 0,
+        "gaze_y": 0,
+        "mouth_curve": 5,
+        "mouth_open": 38,
+        "left_width": 38,
+        "right_width": 38,
+        "brow_left": 0,
+        "brow_right": 0,
+        "brow_raise": 0,
+        "brow_opa": 0
+      },
+      "eyes": "normal",
+      "decor": "none",
+      "mouth": "curve"
+    },
+    {
+      "command": "angry",
+      "label": "生气",
+      "voices": [
+        "生气一点",
+        "生气一下"
+      ],
+      "description": "明显V形眉、窄眼、红色怒气符号",
+      "pose": {
+        "left_height": 24,
+        "right_height": 24,
+        "gaze_x": 0,
+        "gaze_y": 4,
+        "mouth_curve": -6,
+        "mouth_open": 0,
+        "left_width": 54,
+        "right_width": 54,
+        "brow_left": 28,
+        "brow_right": -28,
+        "brow_raise": 0,
+        "brow_opa": 1
+      },
+      "eyes": "normal",
+      "decor": "anger",
+      "mouth": "curve"
+    },
+    {
+      "command": "surprised",
+      "label": "惊讶",
+      "voices": [
+        "惊讶一下",
+        "惊讶表情"
+      ],
+      "description": "大圆眼、抬眉、圆形张嘴",
+      "pose": {
+        "left_height": 82,
+        "right_height": 82,
+        "gaze_x": 0,
+        "gaze_y": 0,
+        "mouth_curve": 5,
+        "mouth_open": 58,
+        "left_width": 62,
+        "right_width": 62,
+        "brow_left": 0,
+        "brow_right": 0,
+        "brow_raise": -15,
+        "brow_opa": 1
+      },
+      "eyes": "normal",
+      "decor": "exclaim",
+      "mouth": "curve"
+    },
+    {
+      "command": "sleepy",
+      "label": "困倦",
+      "voices": [
+        "困倦一下",
+        "困了表情"
+      ],
+      "description": "细长半闭眼、小嘴和Zzz",
+      "pose": {
+        "left_height": 12,
+        "right_height": 12,
+        "gaze_x": 0,
+        "gaze_y": 14,
+        "mouth_curve": 0,
+        "mouth_open": 10,
+        "left_width": 62,
+        "right_width": 62,
+        "brow_left": 0,
+        "brow_right": 0,
+        "brow_raise": 0,
+        "brow_opa": 0
+      },
+      "eyes": "normal",
+      "decor": "sleep",
+      "mouth": "curve"
+    },
+    {
+      "command": "wink",
+      "label": "单眼眨眼",
+      "voices": [
+        "单眼眨眼",
+        "眨一只眼"
+      ],
+      "description": "右眼闭合，左眼睁开，俏皮笑嘴",
+      "pose": {
+        "left_height": 70,
+        "right_height": 4,
+        "gaze_x": 0,
+        "gaze_y": 0,
+        "mouth_curve": 24,
+        "mouth_open": 0,
+        "left_width": 42,
+        "right_width": 60,
+        "brow_left": 0,
+        "brow_right": 0,
+        "brow_raise": 0,
+        "brow_opa": 0
+      },
+      "eyes": "normal",
+      "decor": "none",
+      "mouth": "curve"
+    },
+    {
+      "command": "love",
+      "label": "喜欢",
+      "voices": [
+        "喜欢表情",
+        "爱心表情"
+      ],
+      "description": "粉色爱心眼和笑嘴",
+      "pose": {
+        "left_height": 48,
+        "right_height": 48,
+        "gaze_x": 0,
+        "gaze_y": 0,
+        "mouth_curve": 24,
+        "mouth_open": 0,
+        "left_width": 48,
+        "right_width": 48,
+        "brow_left": 0,
+        "brow_right": 0,
+        "brow_raise": 0,
+        "brow_opa": 0
+      },
+      "eyes": "heart",
+      "decor": "none",
+      "mouth": "curve"
+    },
+    {
+      "command": "confused",
+      "label": "疑惑",
+      "voices": [
+        "疑惑一下",
+        "疑惑表情"
+      ],
+      "description": "右眼大左眼小、锯齿嘴、问号",
+      "pose": {
+        "left_height": 24,
+        "right_height": 78,
+        "gaze_x": -10,
+        "gaze_y": 0,
+        "mouth_curve": 0,
+        "mouth_open": 0,
+        "left_width": 52,
+        "right_width": 32,
+        "brow_left": 0,
+        "brow_right": -20,
+        "brow_raise": 0,
+        "brow_opa": 1
+      },
+      "eyes": "normal",
+      "decor": "question",
+      "mouth": "zigzag"
+    }
+  ]
+}

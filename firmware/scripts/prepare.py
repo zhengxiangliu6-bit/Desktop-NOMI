@@ -3,6 +3,7 @@ import hashlib
 import json
 import pathlib
 import subprocess
+import sys
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 LOCK = json.loads((ROOT / "dependencies.lock.json").read_text(encoding="utf-8"))
@@ -11,6 +12,8 @@ LOCK = json.loads((ROOT / "dependencies.lock.json").read_text(encoding="utf-8"))
 def git(*args):
     return subprocess.check_output(["git", *map(str, args)], text=True).strip()
 
+
+subprocess.run([sys.executable,str(ROOT/"scripts/generate_faces.py"),"--check"],check=True)
 
 for dep in LOCK["dependencies"]:
     destination = ROOT / dep["path"]

@@ -3,19 +3,20 @@
 #include <cstring>
 #include <cstdio>
 #include "pcm_frame.h"
+#include "face_catalog.h"
 namespace nomi {
 enum class RemoteEffect { None, Face, Reset };
 struct RemoteReply { const char *status; RemoteEffect effect = RemoteEffect::None; };
 inline bool remote_face(const char *cmd) {
-    for (auto *s : {"idle","blink","happy","sad","curious","thinking","listening","speaking"})
-        if (!std::strcmp(s,cmd)) return true;
+    for (const auto &d:face_designs)
+        if (!std::strcmp(d.command,cmd)) return true;
     return false;
 }
 class RemoteControl {
 public:
     RemoteReply apply(uint32_t token, uint32_t seq, const char *cmd, uint64_t now, bool valid_session, bool spoken=false) {
         if (!token || !valid_session) return {"STALE"};
-        if (!remote_face(cmd) && std::strcmp(cmd,"probe") && std::strcmp(cmd,"extend")) return {"INVALID"};
+        if (!remote_face(cmd) && std::strcmp(cmd,"probe") && std::strcmp(cmd,"probeall") && std::strcmp(cmd,"extend")) return {"INVALID"};
         const bool new_token=token!=token_;
         if (new_token) { token_=token; have_seq_=false; until_=feedback_=0; }
         if (have_seq_ && seq <= sequence_) {
@@ -24,7 +25,7 @@ public:
         }
         sequence_=seq; have_seq_=true; spoken_=spoken; std::snprintf(command_,sizeof(command_),"%s",cmd);
         status_="OK";
-        if (!std::strcmp(cmd,"probe")) return {status_,new_token?RemoteEffect::Reset:RemoteEffect::None};
+        if (!std::strcmp(cmd,"probe") || !std::strcmp(cmd,"probeall")) return {status_,new_token?RemoteEffect::Reset:RemoteEffect::None};
         if (!std::strcmp(cmd,"extend")) {
             if (!until_ || now>=until_) { status_="ASLEEP"; return {status_}; }
             until_=now+20000; return {status_};

@@ -1,3 +1,5 @@
+> 0.5.0硬件/PC专用能力握手为ctl token seq probeall 0；原probe兼容保留，旧8表情固件不能通过probeall。action支持shared/expressions.json的14个ASCII命令及extend。spoken=0/1仍表示固定回应意图，PC --silent-replies强制0，默认人声已接受指令为1；会话/ACK/播放保护机制不变。此协议不属于Web HTTP API，后端情绪枚举与Key安全机制不变。 详见[表情指南](EXPRESSION_GALLERY.md)。
+
 # 后端 API 契约：阶段 2A / 2B 消费者
 
 > 新增0.4.3 [板载固定“好的”回应](SPOKEN_OKAY.md)：ES8311/GPIO9、短PCM、播放保护，不接动态TTS/云端。固件与PC成对更新，原ASR模型不变，实体扬声器和回灌抑制待验证。

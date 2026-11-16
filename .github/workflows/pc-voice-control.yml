@@ -1,8 +1,8 @@
 name: Windows local voice control
 on:
   push:
-    branches: [feat/h2-pc-voice-control, fix/h2-control-ack-session, feat/h2-spoken-okay]
-    paths: ['tools/usb_asr/**', 'docs/PC_VOICE_CONTROL.md', '.github/workflows/pc-voice-control.yml']
+    branches: [feat/h2-pc-voice-control, fix/h2-control-ack-session, feat/h2-spoken-okay, feat/h2-expression-gallery]
+    paths: ['shared/**', 'tools/usb_asr/**', 'docs/PC_VOICE_CONTROL.md', '.github/workflows/pc-voice-control.yml']
   workflow_dispatch:
 env:
   PYTHONUTF8: '1' # Match setup.cmd/start_control.cmd, including English-locale Windows runners.
@@ -40,6 +40,6 @@ jobs:
         run: python tools/usb_asr/package_pc.py
       - uses: actions/upload-artifact@v4
         with:
-          name: desktop-nomi-pc-voice-control-v0.4.3
-          path: tools/usb_asr/dist/desktop-nomi-pc-voice-control-v0.4.3.zip
+          name: desktop-nomi-pc-voice-control-v0.5.0
+          path: tools/usb_asr/dist/desktop-nomi-pc-voice-control-v0.5.0.zip
           if-no-files-found: error

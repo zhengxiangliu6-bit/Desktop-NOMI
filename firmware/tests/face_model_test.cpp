@@ -1,4 +1,5 @@
 #include "face_model.h"
+#include "face_catalog.h"
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
@@ -19,6 +20,10 @@ int main()
         auto expired = m.update(5000);
         CHECK(m.phase() == Phase::Idle && m.emotion() == Emotion::Neutral);
         CHECK(expired.view == View::Idle || expired.view == View::Blink);
+    }
+    for (const auto &design:face_designs) {
+        m.reset(0); CHECK(m.command(design.command,0));m.update(0);
+        CHECK(m.update(design.view==View::Blink?70:250).view==design.view);
     }
     m.reset(0); m.set_emotion(Emotion::Happy, 0, 2000);
     m.update(200);
@@ -44,7 +49,7 @@ int main()
     auto start = m.update(100).pose;
     auto middle = m.update(190).pose;
     auto end = m.update(280).pose;
-    CHECK(start.left_height == 64 && end.left_height == 40);
+    CHECK(start.left_height == 64 && end.left_height == 34);
     CHECK(middle.left_height < start.left_height && middle.left_height > end.left_height);
     // Long running, transitions, clock crossing 32-bit milliseconds: bounded geometry.
     m.reset(0); unsigned blinks = 0; bool was = false;

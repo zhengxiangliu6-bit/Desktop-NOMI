@@ -24,6 +24,15 @@ int main() {
     c.apply(2,3,"listening",27000,true);
     assert(c.apply(3,0,"probe",27001,true).effect==E::Reset);
     assert(!c.hold(27002));
+    nomi::RemoteControl gallery;
+    assert(gallery.apply(10,0,"probeall",0,true).effect==E::Reset);
+    uint32_t sequence=1;
+    for (const auto &design:nomi::face_designs) {
+        assert(nomi::remote_face(design.command));
+        assert(gallery.apply(10,sequence++,design.command,100,true).effect==E::Face);
+    }
+    assert(sequence==15);
+    assert(!nomi::remote_face("unsupported"));
     char ack[120];
     auto n=nomi::encode_control_ack(ack,sizeof(ack),1,0,"probe","OK");
     assert(n && !std::strncmp(ack,"\n@NOMI_ACK1 00000001 00000000 probe OK ",37));

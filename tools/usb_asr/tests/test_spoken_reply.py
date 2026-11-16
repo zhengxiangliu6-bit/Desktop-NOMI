@@ -27,7 +27,7 @@ class ReplyTests(unittest.TestCase):
 
     def test_speak_only_for_spoken_commands_not_probe_extend_or_timeout(self):
         lines=[];c=CommandChannel(lambda:0,lambda *x:None,1)
-        c.tick(lines.append);self.assertTrue(lines[-1].endswith(b'probe 0\r\n'));c.observe(ack(1,0,'probe'))
+        c.tick(lines.append);self.assertTrue(lines[-1].endswith(b'probeall 0\r\n'));c.observe(ack(1,0,'probeall'))
         for seq,cmd,spoken,expected in [(1,'happy',True,1),(2,'extend',True,0),(3,'idle',False,0),(4,'idle',True,1)]:
             c.submit(cmd,'test',spoken);c.tick(lines.append)
             self.assertTrue(lines[-1].endswith(f'{cmd} {expected}\r\n'.encode()))
@@ -50,3 +50,11 @@ class ReplyTests(unittest.TestCase):
         route_result('最终','开心一点',c,lambda *x:calls.append(x),lambda *x:None,21)
         self.assertEqual(calls[0][0],'idle')
         self.assertFalse(calls[0][2]) # late result is rejected; expiry is not a spoken instruction
+
+    def test_silent_mode_masks_all_human_replies(self):
+        lines=[];c=CommandChannel(lambda:0,lambda *x:None,1,spoken_enabled=False)
+        c.tick(lines.append);c.observe(ack(1,0,'probeall'))
+        for seq,cmd in enumerate(('listening','angry','love','idle'),1):
+            c.submit(cmd,'human instruction',True);c.tick(lines.append)
+            self.assertTrue(lines[-1].endswith(f'{cmd} 0\r\n'.encode()))
+            c.observe(ack(1,seq,cmd))
