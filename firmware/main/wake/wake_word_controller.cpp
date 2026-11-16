@@ -8,6 +8,8 @@
 #include <initializer_list>
 #include <cstring>
 
+extern const uint8_t okay_start[] asm("_binary_okay_pcm_start");
+extern const uint8_t okay_end[] asm("_binary_okay_pcm_end");
 namespace nomi {
 namespace { const char *TAG = "wake"; constexpr EventBits_t FETCH_DONE = BIT0; }
 const char *WakeWordController::profile()
@@ -27,6 +29,10 @@ bool WakeWordController::start()
     events_ = xQueueCreate(4, sizeof(WakeEvent));
     voice_events_ = xQueueCreate(8, sizeof(VoiceEvent));
     sync_ = xEventGroupCreate();
+#if CONFIG_NOMI_VOICE_COMMANDS
+    sayings_=xQueueCreate(1,sizeof(uint32_t));
+    if(!sayings_)goto failed;
+#endif
     if (!requests_ || !events_ || !voice_events_ || !sync_) goto failed;
     if (xTaskCreatePinnedToCore(fetch_entry, "wake_fetch", 8192, this, 3, &fetch_task_, 1) != pdPASS) goto failed;
     if (xTaskCreatePinnedToCore(capture_entry, "wake_capture", 8192, this, 4, &capture_task_, 0) != pdPASS) goto failed;
@@ -39,6 +45,9 @@ failed:
     if (events_) { vQueueDelete(events_); events_ = nullptr; }
     if (voice_events_) { vQueueDelete(voice_events_); voice_events_ = nullptr; }
     if (sync_) { vEventGroupDelete(sync_); sync_ = nullptr; }
+#if CONFIG_NOMI_VOICE_COMMANDS
+    if(sayings_){vQueueDelete(sayings_);sayings_=nullptr;}
+#endif
     ESP_LOGE(TAG, "Task/queue allocation failed; face remains available");
     return false;
 }
@@ -55,7 +64,21 @@ bool WakeWordController::poll(WakeEvent &event)
 }
 bool WakeWordController::poll_voice(VoiceEvent &event)
 {
-    return voice_events_ && xQueueReceive(voice_events_, &event, 0) == pdTRUE;
+    while(voice_events_ && xQueueReceive(voice_events_, &event, 0)==pdTRUE) {
+        if(!voice_guarded())return true;
+    }
+    return false;
+}
+bool WakeWordController::say_okay(uint32_t expected_epoch) {
+#if CONFIG_NOMI_VOICE_COMMANDS
+    if(!sayings_ || expected_epoch!=epoch_ || faulted() || state_!=WakeState::Monitoring) return false;
+    bool expected=false;
+    if(!reply_muted_.compare_exchange_strong(expected,true))return false;
+    if(xQueueSend(sayings_,&expected_epoch,0)!=pdTRUE){reply_muted_=false;return false;}
+    return true;
+#else
+    (void)expected_epoch; return false;
+#endif
 }
 void WakeWordController::fault(const char *stage)
 {
@@ -130,6 +153,10 @@ bool WakeWordController::initialize()
 bool WakeWordController::cleanup()
 {
     stop_ = true;
+#if CONFIG_NOMI_VOICE_COMMANDS
+    player_.cancel(audio_);reply_muted_=false;reply_release_at_=0;
+    if(sayings_)xQueueReset(sayings_);
+#endif
     audio_.close(); // capture owner: stop hardware even if AFE cannot shut down.
     // The fetch worker has bounded waits. Never destroy an object used by another task.
     if (fetch_started_ && !(xEventGroupWaitBits(sync_, FETCH_DONE, pdTRUE, pdFALSE, pdMS_TO_TICKS(3000)) & FETCH_DONE)) {
@@ -176,6 +203,29 @@ void WakeWordController::capture_loop()
                     rms_[ch] = uint32_t(std::sqrt(double(level.energy[ch])/chunk_));
                     clipped_[ch].fetch_add(level.clipped[ch]);
                 }
+#if CONFIG_NOMI_VOICE_COMMANDS
+                uint32_t requested_epoch=0;
+                if(xQueueReceive(sayings_,&requested_epoch,0)==pdTRUE) {
+                    if(requested_epoch!=session_epoch_ || epoch_!=session_epoch_)break;
+                    if(!player_.begin(audio_,reinterpret_cast<const int16_t *>(okay_start),size_t(okay_end-okay_start)/2)) {
+                        fault("speaker begin");break;
+                    }
+                    reply_release_at_=0;
+                    ESP_LOGI(TAG,"LOCAL_REPLY_START; recognition guarded, PA enabled");
+                }
+                if(reply_muted_) {
+                    std::memset(mono_,0,chunk_*sizeof(int16_t));
+                    const bool was_playing=player_.active();
+                    if(!player_.pump(audio_,chunk_)){fault("speaker write");break;}
+                    const auto now=uint64_t(esp_timer_get_time()/1000);
+                    // Drain the bounded AFE ring/history with silence before decoder resumes.
+                    if(was_playing && !player_.active())reply_release_at_=now+2000;
+                    if(reply_release_at_ && now>=reply_release_at_) {
+                        reply_release_at_=0;reply_muted_=false;
+                        ESP_LOGI(TAG,"LOCAL_REPLY_DONE; VOICE_LISTEN_READY");
+                    }
+                }
+#endif
                 ++blocks_;
                 feeding_ = true;
                 const int fed = afe_->feed(afe_data_, mono_);
@@ -192,6 +242,9 @@ void WakeWordController::capture_loop()
 void WakeWordController::fetch_loop()
 {
     for (;;) {
+#if CONFIG_NOMI_VOICE_COMMANDS
+        bool muted_last=false;
+#endif
         ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
         unsigned failures = 0;
         while (!stop_ || feeding_) {
@@ -205,6 +258,10 @@ void WakeWordController::fetch_loop()
             failures = 0;
             if (result->data_size <= 0 || result->data_size % 2 || result->data_size > 4096) { fault("AFE output format"); continue; }
 #if CONFIG_NOMI_VOICE_COMMANDS
+            const bool muted=reply_muted_.load();
+            if(muted!=muted_last)recognizer_.reset();
+            muted_last=muted;
+            if(muted) {++fetched_;continue;}
             if (!recognizer_.consume(result->data, size_t(result->data_size)/sizeof(int16_t), voice_events_, session_epoch_)) {
                 ++dropped_; fault("MultiNet inference/result queue"); continue;
             }

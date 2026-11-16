@@ -38,6 +38,7 @@ bool CommandRecognizer::open(srmodel_list_t *models)
     for (const auto &c : voice_commands) ESP_LOGI(TAG, "VOICE_COMMAND id=%d phrase=%s", c.id, c.label);
     return true;
 }
+void CommandRecognizer::reset() { used_=0; if(data_) mn_->clean(data_); }
 void CommandRecognizer::close()
 {
     if (commands_allocated_) { esp_mn_commands_free(); commands_allocated_ = false; }

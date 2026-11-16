@@ -4,6 +4,7 @@
 #include "wake_logic.h"
 #include "voice_session.h"
 #include "command_recognizer.h"
+#include "fixed_reply_player.h"
 #include "esp_afe_sr_models.h"
 #include "model_path.h"
 #include "freertos/event_groups.h"
@@ -21,6 +22,14 @@ public:
     WakeState state() const { return state_.load(); }
     bool faulted() const { return failed_.load(); }
     void status() const;
+    bool say_okay(uint32_t epoch);
+    bool voice_guarded() const {
+#if CONFIG_NOMI_VOICE_COMMANDS
+        return reply_muted_.load();
+#else
+        return false;
+#endif
+    }
     static const char *profile();
 private:
     struct Request { bool enabled; uint32_t epoch; };
@@ -36,6 +45,10 @@ private:
     QueueHandle_t voice_events_ = nullptr;
 #if CONFIG_NOMI_VOICE_COMMANDS
     CommandRecognizer recognizer_;
+    FixedReplyPlayer player_;
+    QueueHandle_t sayings_ = nullptr;
+    uint64_t reply_release_at_ = 0; // capture owner
+    std::atomic<bool> reply_muted_{false};
 #endif
     EventGroupHandle_t sync_ = nullptr;
     TaskHandle_t capture_task_ = nullptr, fetch_task_ = nullptr;

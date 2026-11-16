@@ -58,7 +58,7 @@ void UsbAudioStream::run() {
         const uint32_t session = token_;
         if (!session) { vTaskDelay(pdMS_TO_TICKS(20)); continue; }
         state_ = 1; frames_ = 0;
-        playback_.cancel();
+        playback_.cancel(audio_);
         bool bad = audio_.open() != ESP_OK;
         uint32_t sequence = 0, observed = audio_.overflows();
         size_t filled = 0; unsigned empty = 0, warmup = 10;
@@ -79,7 +79,7 @@ void UsbAudioStream::run() {
             if (speech_pending_) {
                 speech_pending_=false;
                 if (speech_token_==session) {
-                    if (audio_.speaker_begin()!=ESP_OK || !playback_.begin(size_t(okay_end-okay_start)/2)) {
+                    if (!playback_.begin(audio_,reinterpret_cast<const int16_t *>(okay_start),size_t(okay_end-okay_start)/2)) {
                         speech_event("ERROR"); bad=true; break;
                     }
                     speech_event("START");
@@ -88,14 +88,7 @@ void UsbAudioStream::run() {
             const bool guarded=playback_.active();
             if (guarded) {
                 std::memset(mono,0,sizeof(mono)); // Never stream our own reply back into ASR.
-                if (playback_.writing()) {
-                    std::memset(stereo,0,sizeof(stereo));
-                    const auto *clip=reinterpret_cast<const int16_t *>(okay_start);
-                    for (size_t i=0;i<playback_.copy_samples();++i)
-                        stereo[2*i]=stereo[2*i+1]=clip[playback_.offset()+i];
-                    if (audio_.speaker_write(stereo,sizeof(stereo))!=ESP_OK) { speech_event("ERROR"); bad=true; break; }
-                }
-                if (playback_.should_mute()) audio_.speaker_end();
+                if (!playback_.pump(audio_,stream_samples)) { speech_event("ERROR"); bad=true; break; }
             }
 
             const auto size = encode_frame(line, sizeof(line), session, sequence++, channel, mono, stream_samples, guarded?1:0);
@@ -103,10 +96,10 @@ void UsbAudioStream::run() {
             // Finite timeout: a vanished/slow host must never block capture indefinitely.
             if (usb_serial_jtag_write_bytes(line, size, pdMS_TO_TICKS(20)) != int(size)) { bad=true; break; }
             ++frames_; state_ = 2;
-            if (guarded && playback_.step()) speech_event("DONE");
+            if (guarded && !playback_.active()) speech_event("DONE");
         }
+        playback_.cancel(audio_); speech_pending_=false;
         audio_.close();
-        playback_.cancel(); speech_pending_=false;
         uint32_t expected = session;
         token_.compare_exchange_strong(expected, 0); // Do not erase a newer host's request.
         state_ = bad ? 3 : 0;

@@ -15,13 +15,19 @@ inline constexpr VoiceCommand voice_commands[] = {
     {9, "hui dao dai ji", "idle", "回到待机"},
     {10, "xiu xi yi xia", nullptr, "休息一下"},
     {11, "biao qing yan shi", "demo", "表情演示"},
+    {12, "sheng qi yi xia", "angry", "生气一下"},
+    {13, "jing ya yi xia", "surprised", "惊讶一下"},
+    {14, "kun juan yi xia", "sleepy", "困倦一下"},
+    {15, "dan yan zha yan", "wink", "单眼眨眼"},
+    {16, "xi huan biao qing", "love", "喜欢表情"},
+    {17, "yi huo yi xia", "confused", "疑惑一下"},
 };
 inline const VoiceCommand *voice_command(int id) {
     for (const auto &c : voice_commands) if (c.id == id) return &c;
     return nullptr;
 }
 struct VoiceEvent { uint32_t epoch; int id; float probability; uint64_t at_ms; };
-enum class VoiceAction { Ignore, Wake, Expression, Sleep, Timeout };
+enum class VoiceAction { Ignore, Wake, Extend, Expression, Sleep, Timeout };
 // UI task owns this gate. Recognition and FaceModel never own conversational state.
 class VoiceSession {
 public:
@@ -39,7 +45,7 @@ public:
         if (e.id == last_id_ && e.at_ms-last_at_ < 1200) return VoiceAction::Ignore;
         if (e.id != 1 && (!listening(now) || !listening(e.at_ms))) return VoiceAction::Ignore;
         last_id_ = e.id; last_at_ = e.at_ms;
-        if (e.id == 1) { until_ = e.at_ms+window_ms; return VoiceAction::Wake; }
+        if (e.id == 1) { const bool awake=listening(now); until_ = e.at_ms+window_ms; return awake?VoiceAction::Extend:VoiceAction::Wake; }
         if (e.id == 10 || e.id == 9) { reset(now); return VoiceAction::Sleep; }
         until_ = e.at_ms+window_ms;
         return VoiceAction::Expression;

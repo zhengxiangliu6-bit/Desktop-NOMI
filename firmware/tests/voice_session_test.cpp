@@ -20,6 +20,8 @@ int main() {
     assert(send(2,1500)==VoiceAction::Expression);
     assert(send(2,1600)==VoiceAction::Ignore);
     for (const auto &c : voice_commands) assert(voice_command(c.id)==&c);
+    assert(send(1,1800)==VoiceAction::Extend);
+    for(int id=12;id<=17;++id)assert(send(id,1800+(id-11)*10)==VoiceAction::Expression);
     assert(send(999,1800)==VoiceAction::Ignore);
     assert(send(10,2000)==VoiceAction::Sleep);
     assert(send(2,2100)==VoiceAction::Ignore);

@@ -48,7 +48,7 @@ void update_voice_indicator(uint64_t now, bool demo_active) {
     case nomi::WakeState::Disabled: color = 0x8b9199; break;
     case nomi::WakeState::Monitoring:
     case nomi::WakeState::Listening:
-        if (!demo_active) color = voice_session.listening(now) ? 0x287cc4 : 0x36865d;
+        if (!demo_active && !wake.voice_guarded()) color = voice_session.listening(now) ? 0x287cc4 : 0x36865d;
         break;
     default: break;
     }
@@ -211,7 +211,10 @@ extern "C" void app_main()
             const auto action = voice_session.accept(voice_event, wake.epoch(), now, demo || wake.faulted());
             if (action == nomi::VoiceAction::Wake) {
                 wake_latch.clear(); model.reset(now); voice_hold = true;
-                ESP_LOGI(TAG, "WAKE_WORD_DETECTED source=multinet_command id=1 probability=%.3f; LISTENING window=20s", double(voice_event.probability));
+                wake.say_okay(voice_event.epoch);
+                ESP_LOGI(TAG, "WAKE_WORD_DETECTED source=multinet_command id=1 probability=%.3f; window=20s", double(voice_event.probability));
+            } else if (action == nomi::VoiceAction::Extend) {
+                ESP_LOGI(TAG, "VOICE_SESSION_EXTEND; no repeat playback or face reset");
             } else if (action == nomi::VoiceAction::Expression) {
                 const auto *c = nomi::voice_command(voice_event.id);
                 voice_hold = false;
@@ -222,9 +225,11 @@ extern "C" void app_main()
                     model.command(c->face, now);
                     voice_feedback_until = now+5000;
                 }
+                wake.say_okay(voice_event.epoch);
                 ESP_LOGI(TAG, "VOICE_COMMAND_ACCEPTED id=%d action=%s probability=%.3f", c->id, c->face, double(voice_event.probability));
             } else if (action == nomi::VoiceAction::Sleep) {
                 voice_hold = false; model.reset(now);
+                wake.say_okay(voice_event.epoch);
                 ESP_LOGI(TAG, "VOICE_SLEEP id=%d", voice_event.id);
             } else ESP_LOGI(TAG, "VOICE_IGNORED id=%d (asleep/demo/stale/threshold/debounce)", voice_event.id);
         }

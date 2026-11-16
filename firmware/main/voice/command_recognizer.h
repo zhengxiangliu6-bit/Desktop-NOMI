@@ -11,6 +11,7 @@ namespace nomi {
 class CommandRecognizer {
 public:
     bool open(srmodel_list_t *models);
+    void reset(); // Fetch-task owner only; discard decoder history across playback.
     void close(); // Only after the fetch worker has stopped.
     bool consume(const int16_t *pcm, size_t samples, QueueHandle_t events, uint32_t epoch);
     uint32_t frames() const { return frames_.load(); }

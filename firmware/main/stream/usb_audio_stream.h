@@ -3,7 +3,7 @@
 #if CONFIG_NOMI_USB_ASR
 #include <atomic>
 #include "audio_input.h"
-#include "playback_guard.h"
+#include "fixed_reply_player.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/queue.h"
@@ -22,7 +22,7 @@ private:
     static void entry(void *p) { static_cast<UsbAudioStream *>(p)->run(); }
     void run();
     struct Reply { char text[120]; size_t size; bool spoken; uint32_t token, sequence; };
-    PlaybackGuard playback_;
+    FixedReplyPlayer playback_;
     uint32_t speech_token_=0, speech_sequence_=0;
     bool speech_pending_=false;
     void speech_event(const char *event, uint32_t token=0, uint32_t sequence=0);

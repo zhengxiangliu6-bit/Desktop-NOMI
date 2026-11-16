@@ -46,11 +46,11 @@ def validate(build, profile):
     expected = {"audio": [], "usb_asr": [], "benchmark": ["wn9_xiaoaitongxue"], "commands": ["mn7_cn", "fst"]}[profile]
     if sorted(names) != sorted(expected): raise ValueError(f"Wrong models: {names}")
     if len(data) > 0x400000: raise ValueError("Model partition overflow")
-    if profile == "usb_asr":
+    if profile in ("usb_asr","commands"):
         asset = ROOT / "components/nomi_audio/assets/okay.pcm"
         meta = json.loads(asset.with_suffix(".json").read_text(encoding="utf-8"))
         pcm = asset.read_bytes()
-        if meta.get("text") != "好的" or meta.get("sample_rate") != 16000 or meta.get("channels") != 1 or meta.get("format") != "s16le" or meta.get("bytes") != len(pcm) or meta.get("samples") != len(pcm)//2 or not 0 < len(pcm) <= 32000 or len(pcm)%2 or hashlib.sha256(pcm).hexdigest() != meta["sha256"]:
+        if meta.get("text") != "好的" or meta.get("sample_rate") != 16000 or meta.get("channels") != 1 or meta.get("format") != "s16le" or meta.get("bytes") != len(pcm) or meta.get("samples") != len(pcm)//2 or not 0 < len(pcm) <= 96000 or len(pcm)%2 or hashlib.sha256(pcm).hexdigest() != meta["sha256"]:
             raise ValueError("Fixed reply asset format/hash mismatch")
     args = json.loads((build / "flasher_args.json").read_text(encoding="utf-8"))
     offsets = {int(k, 0) for k in args["flash_files"]}
@@ -88,9 +88,9 @@ def package(build, profile, config, args):
         "H2-NOTICE.md": "components/nomi_audio/NOTICE.md",
     }.items():
         files["licenses/" + name] = ROOT / path
-    for name in ("HARDWARE_H2.md", "HARDWARE_H1.md", "HARDWARE_VOICE.md", "USB_CHINESE_TRANSCRIPTION.md", "PC_VOICE_CONTROL.md", "SPOKEN_OKAY.md", "EXPRESSION_GALLERY.md", "VOICE_NEXT_PLAN.md"):
+    for name in ("HARDWARE_H2.md", "HARDWARE_H1.md", "HARDWARE_VOICE.md", "USB_CHINESE_TRANSCRIPTION.md", "PC_VOICE_CONTROL.md", "SPOKEN_OKAY.md", "EXPRESSION_GALLERY.md", "VOICE_NEXT_PLAN.md", "OFFLINE_COMMAND_REPLY.md"):
         files["docs/" + name] = ROOT.parent / "docs" / name
-    if profile == "usb_asr":
+    if profile in ("usb_asr","commands"):
         # Export the exact embedded PCM as a listenable WAV, without a second source asset.
         import wave
         preview=build / "okay-preview.wav"
@@ -101,6 +101,7 @@ def package(build, profile, config, args):
         files["assets/okay.json"] = ROOT / "components/nomi_audio/assets/okay.json"
         files["licenses/OKAY-ASSET.md"] = ROOT / "components/nomi_audio/assets/NOTICE.md"
         files["licenses/MeloTTS.txt"] = ROOT / "components/nomi_audio/assets/MeloTTS-LICENSE.txt"
+    if profile == "usb_asr":
         host = ROOT.parent / "tools/usb_asr"
         files["pc/VOICE_CONTROL_GUIDE.md"] = ROOT.parent / "docs/PC_VOICE_CONTROL.md"
         files["pc/EXPRESSION_GUIDE.md"] = ROOT.parent / "docs/EXPRESSION_GALLERY.md"
@@ -142,11 +143,13 @@ Terminal:
 Commands: status / demo / wake off / wake on / wake reinit / wake status
 See manifest.json for offsets, SHA256 and model identity.
 '''
+    if profile == "commands":
+        readme += "\nOFFLINE 0.6.0: 14 local face commands + fixed reply; no PC application needed.\nRead docs/OFFLINE_COMMAND_REPLY.md. WAV replacement needs rebuild + reflash.\n"
     if profile == "usb_asr":
-        readme = """Desktop-NOMI 14 expression gallery + neural spoken OK / firmware 0.5.1
+        readme = """Desktop-NOMI 14 expression gallery + fixed spoken OK / firmware 0.6.0
 Board: Waveshare ESP32-S3-Touch-LCD-1.85B ONLY
 Device captures audio. ASR runs LOCALLY on Windows.
-0.5.1 improves the fixed Chinese OK clip using offline neural synthesis; PC0.5.0 remains compatible; playback guard temporarily suppresses microphone ASR.
+0.6.0 shares the fixed player with offline commands; PC0.5.0 remains compatible; playback guard temporarily suppresses microphone ASR.
 Read docs/EXPRESSION_GALLERY.md. Test faces with start_control.cmd COM3 --silent-replies first.
 Read docs/SPOKEN_OKAY.md. Keep your installed pc/.venv and models when merging pc files.
 Read docs/USB_CHINESE_TRANSCRIPTION.md before use.
