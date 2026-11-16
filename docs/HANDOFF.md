@@ -2,6 +2,15 @@
 
 用户在测试“好的”之前要求超过10种不重复且明显不同的表情、语音/串口切换、原GitHub静态页可看对应效果，并确认代码上传和合并方法。独立分支`feat/h2-expression-gallery`从已推送`70a7d81 feat/h2-spoken-okay`创建；main仍为e06e8a9，包含此前所有H1/H2提交的最终分支可一次合并。不自动创建PR、合并main或部署正式Pages。
 
+## 0.5.0最终交付验证
+
+- 实现源码提交`9f6f997`；`047537d`仅新增GitHub分支可直接查看的LVGL总览PNG及文档引用。四profile本地ESP-IDF5.5.4最终编译、链接审计、打包全部通过；manifest source_commit=9f6f997、source_dirty=false，逐文件SHA256复核通过。
+- usb_asr binary实际671,728字节；链接器静态DIRAM87,443字节/341,760（动态堆与运行时栈仍需实机观察）。交付别名`firmware/dist/desktop-nomi-expression-14-v0.5.0.zip`为usb_asr完整包，SHA256 `1edfb14e0e9402c669a47e0f3de68349a7edd0f6a8764445eea3bc4e444eae4f`，约4MB。PC单独更新包`tools/usb_asr/dist/desktop-nomi-pc-voice-control-v0.5.0.zip`包含生成目录和两份升级指南，不含模型/venv/用户录音；完整固件包已包含pc文件，不需重复下载。
+- GitHub [固件检查43870955739](https://github.com/zhengxiangliu6-bit/Desktop-NOMI/actions/runs/43870955739)：host_asr/native/audio/benchmark/commands/usb_asr全部success；四个profile可下载Actions产物。用户本次选usb_asr。
+- GitHub [Windows/Linux本地ASR43870955756](https://github.com/zhengxiangliu6-bit/Desktop-NOMI/actions/runs/43870955756)：两平台固定依赖/中文样本和“好的”软件解码/测试及PC打包全部success。
+- GitHub [Mock Pages43870955734](https://github.com/zhengxiangliu6-bit/Desktop-NOMI/actions/runs/43870955734)：build/tests成功，功能分支deploy按设计跳过，静态审阅artifact可下载。正式Pages仍需用户合并main后更新；未自动创建PR、合并main或发布。
+- `git fetch origin main`后确认origin/main是HEAD祖先；当前最终分支已经包含此前所有硬件代码。此记录为软件构建及上传证据，不能代替本版实体14表情、扬声器和30分钟验收。
+
 ## 实现与文件
 
 - `shared/expressions.json`14造型和严格语音别名；`firmware/scripts/generate_faces.py`生成`firmware/main/face_catalog.h`、`tools/usb_asr/face_catalog.py`、`frontend/src/features/hardware/expressions.generated.ts`，prepare/build及Pages检查生成文件同步。
