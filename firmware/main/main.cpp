@@ -13,6 +13,7 @@
 #include "esp_heap_caps.h"
 #include "esp_psram.h"
 #include "driver/usb_serial_jtag.h"
+#include "driver/usb_serial_jtag_vfs.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include <cstring>
@@ -179,6 +180,10 @@ extern "C" void app_main()
     serial.tx_buffer_size = 1024;
 #endif
     ESP_ERROR_CHECK(usb_serial_jtag_driver_install(&serial));
+#if CONFIG_NOMI_VOICE_COMMANDS
+    // Do not let default polling stdout bypass the driver and inject bytes inside PCM packets.
+    usb_serial_jtag_vfs_use_driver();
+#endif
     lv_init();
     lv_tick_set_cb(lv_clock);
     nomi_panel_start();

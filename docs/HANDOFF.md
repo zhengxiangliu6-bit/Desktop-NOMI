@@ -17,7 +17,7 @@
 ## 串口音频与显示工具
 
 - AudioTrace/TraceFramer：显式trace on/token开启，CH1原始MIC1、CH2正常识别时恢复VAD缓存后的AFE流；独立序号、320样本连续帧/FNV/flags/base64，@NTRC1与PC识别NOMI2分离。捕获/推理各自拥有缓冲，不插零凑AFE块；停止不足20ms尾部不发送。
-- 每次USB写有界等待，IDF驱动完整帧原子入环；慢主机/丢失心跳2s关追踪，保留本地识别。原始流在播放保护中仍可能含真实声音，带flags，AFE流保护期间不供模型识别。默认不开传输、不保存/上传。
+- 每次USB写有界等待，commands stdout也切到同一驱动，避免默认轮询VFS旁路写FIFO破坏音频包；完整帧原子入环；慢主机/丢失心跳2s关追踪，保留本地识别。原始流在播放保护中仍可能含真实声音，带flags，AFE流保护期间不供模型识别。默认不开传输、不保存/上传。
 - @NRES1原子输出每个DETECTED最高候选ID/配置中文标签/分数，非任意中文转录。无候选不编造词；底层传输背压可能丢诊断文本，但detected计数仍可靠。不因日志当作控制动作，原USB控制ACK不变。
 - tools/local_voice_debug/monitor.py + start_debug.cmd随commands包，只用pyserial和标准库，不安装/调用电脑ASR或云端。显示双路电平与ESP32候选，默认20秒后关追踪，不关设备本地麦克风；显式--record-dir才写两个WAV，拒绝覆盖旧文件、校验失败不补静音，异常也关闭文件。原用户音频只从仓库外导入私有包。
 
