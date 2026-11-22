@@ -28,6 +28,14 @@
 - 已执行原生CTest10/10、Python10/10、PC22/22、共享目录--check、actionlint/diff；真实C++TraceFramer→Python解码2560样本逐值一致/CRC通过；PTY模拟CLI两轮通过（默认不录音、显式双WAV内容一致，均无ASR加载）。不将模拟串口或模型fixture校验冒称板上自检PASS。
 - 实体自检、双路USB吞吐/电平/缓存恢复、推理/堆/栈、准确激活/误触发、用户回复/回灌、30分钟稳定仍待用户验证。下一轮第一步看自动MN_SELFTEST，不需反复喊；FAIL分别看silence/reference，再决定模型层或输入层排查。
 
+## 0.6.3最终交付记录
+
+- 源码42a39ba；四profile本地ESP-IDF5.5.4最终编译/审计/打包通过，各包source_dirty=false并逐文件SHA256复核。commands私有包核验原用户PCM和官方自检PCM都在链接app内，含debug/monitor.py、start_debug.cmd、完整诊断指南与原许可证；应用1,281,984字节，小于4MB应用分区。文件大小不是运行时RAM占用，不冒称现场内存验收。
+- 下载别名`firmware/dist/desktop-nomi-audio-trace-your-voice-v0.6.3.zip`，7,825,298字节，SHA256 `6a203f3dd95e7d35b3c3cee8e481710eae804f4ab0ff6622044e4a814309e027`。用户音频仍仅本地私有素材，不进入公开Git/Actions。
+- GitHub固件run45040652856（42a39ba）host_asr/native/四ESP32S3目标全部success；前两轮0e2de00/91a0513也success。**CI不执行板上MultiNet自检，也不包含用户声音**，不能把它当硬件PASS。
+- 本轮软件证据：CTest10/10、Python工具/协议10/10、PC22/22；C++→Python音频协议2560样本逐值一致；PTY CLI两轮默认无录音/显式双WAV成功；源码推送完成，无PR/合并main。docs/LOCAL_VOICE_TRACE包含分路raw/afe/both与20秒/显式录音方法。
+- 用户下一步：刷定制commands包，等初始化自检后用debug/monitor.py接收状态与音频（无电脑ASR）。第一步可选--source raw降低带宽，之后--source afe或both。先看MN_RUNTIME selftest，再看原始/AFE电平、cache_samples、推理预算和HEAP，最后说一次目标词；FAIL分别看silence/reference，不继续盲喊或盲降。全部真实硬件判断待这轮数据。
+
 ---
 
 # 当前0.6.2：本地未激活的诊断与门槛校准
