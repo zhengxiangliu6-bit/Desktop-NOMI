@@ -89,7 +89,7 @@ def package(build, profile, config, args):
         "H2-NOTICE.md": "components/nomi_audio/NOTICE.md",
     }.items():
         files["licenses/" + name] = ROOT / path
-    for name in ("HARDWARE_H2.md", "HARDWARE_H1.md", "HARDWARE_VOICE.md", "USB_CHINESE_TRANSCRIPTION.md", "PC_VOICE_CONTROL.md", "SPOKEN_OKAY.md", "EXPRESSION_GALLERY.md", "VOICE_NEXT_PLAN.md", "OFFLINE_COMMAND_REPLY.md"):
+    for name in ("HARDWARE_H2.md", "HARDWARE_H1.md", "HARDWARE_VOICE.md", "USB_CHINESE_TRANSCRIPTION.md", "PC_VOICE_CONTROL.md", "SPOKEN_OKAY.md", "EXPRESSION_GALLERY.md", "VOICE_NEXT_PLAN.md", "OFFLINE_COMMAND_REPLY.md", "LOCAL_VOICE_TRACE.md"):
         files["docs/" + name] = ROOT.parent / "docs" / name
     if profile in ("usb_asr","commands"):
         # Export the exact embedded PCM as a listenable WAV, without a second source asset.
@@ -101,8 +101,13 @@ def package(build, profile, config, args):
         files["okay-preview.wav"]=preview
         files["assets/okay.json"] = ASSETS / "okay.json"
         files["licenses/OKAY-ASSET.md"] = ASSETS / "NOTICE.md"
+        if profile=="commands":files["licenses/DIAGNOSTIC.md"] = ROOT / "main/voice/DIAGNOSTIC_NOTICE.md"
         if (ASSETS / "MeloTTS-LICENSE.txt").exists():
             files["licenses/MeloTTS.txt"] = ASSETS / "MeloTTS-LICENSE.txt"
+    if profile=="commands":
+        debug=ROOT.parent / "tools/local_voice_debug"
+        for name in ("monitor.py","start_debug.cmd"):
+            files["debug/"+name]=debug/name
     if profile == "usb_asr":
         host = ROOT.parent / "tools/usb_asr"
         files["pc/VOICE_CONTROL_GUIDE.md"] = ROOT.parent / "docs/PC_VOICE_CONTROL.md"
@@ -147,9 +152,9 @@ Commands: status / demo / wake off / wake on / wake reinit / wake status
 See manifest.json for offsets, SHA256 and model identity.
 '''
     if profile == "commands":
-        readme += "\nOFFLINE 0.6.2: 14 local face commands + fixed reply; no PC application needed.\nRead docs/OFFLINE_COMMAND_REPLY.md. WAV replacement needs rebuild + reflash.\n"
+        readme += "\nOFFLINE 0.6.3: 14 local face commands + fixed reply; no PC application needed.\nRead docs/OFFLINE_COMMAND_REPLY.md. WAV replacement needs rebuild + reflash.\n"
     if profile == "usb_asr":
-        readme = """Desktop-NOMI 14 expression gallery + fixed spoken OK / firmware 0.6.2
+        readme = """Desktop-NOMI 14 expression gallery + fixed spoken OK / firmware 0.6.3
 Board: Waveshare ESP32-S3-Touch-LCD-1.85B ONLY
 Device captures audio. ASR runs LOCALLY on Windows.
 0.6.0 shares the fixed player with offline commands; PC0.5.0 remains compatible; playback guard temporarily suppresses microphone ASR.
@@ -192,6 +197,8 @@ def main():
     if not options.skip_prepare:
         subprocess.run([sys.executable, str(ROOT / "scripts/prepare.py")], check=True)
     subprocess.run([sys.executable,str(ROOT / "scripts/generate_faces.py"),"--check"],check=True)
+    if options.profile=="commands":
+        subprocess.run([sys.executable,str(ROOT/"scripts/prepare_voice_fixture.py")],check=True)
     idf = pathlib.Path(os.environ["IDF_PATH"]) / "tools/idf.py"
     build = ROOT / ("build-" + options.profile)
     config = ROOT / ("sdkconfig." + options.profile + ".local")

@@ -1,3 +1,5 @@
+> 0.6.3仅commands新增trace on token / trace ping token / trace off，2秒租约；新@NTRC1独立双通道序号/flags/checksum，与NOMI2分离。CH1原MIC1，CH2正常时是补回VAD缓存的模型输入；保护期间CH2为被屏蔽AFE输出。仅显式主机请求才发送音频；默认不开启/保存/上传。新增自检/推理/HEAP状态，用户声音仍私有。
+
 > 0.6.2本地调试命令voice threshold N（30..95）通过原子请求交推理任务应用，VoiceSession使用相同已应用值，变更先结束会话并清decoder；默认90，重启复原，不存NVS。增加DETECTED候选与状态计数，只输出配置标签，不当逐字转录。USB协议/PC词表/20秒逻辑不改。
 
 > 0.6.0 commands新增本地表情ID12–17：angry/surprised/sleepy/wink/love/confused，原ID1–11保留；VoiceAction::Extend仅内部状态，不重复播放/重置表情。串口LOCAL_REPLY_START/DONE是固定流程日志而非中文逐字转录。USB0.5.0控制/音频协议保持兼容，未改PC词表。见[离线指南](OFFLINE_COMMAND_REPLY.md)。

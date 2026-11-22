@@ -1,9 +1,12 @@
 #include "wake_word_controller.h"
+#include "afe_input.h"
 #include "sdkconfig.h"
 #include "esp_heap_caps.h"
 #include "esp_log.h"
 #include "esp_timer.h"
 #include <cmath>
+#include <algorithm>
+#include "esp_system.h"
 #include <cstdlib>
 #include <initializer_list>
 #include <cstring>
@@ -89,6 +92,9 @@ bool WakeWordController::initialize()
 {
     ++attempts_; state_ = WakeState::Starting;
     failed_ = false; detected_ = false; stop_ = false;
+#if CONFIG_NOMI_VOICE_COMMANDS
+    afe_peak_=afe_rms_=afe_zero_=cache_samples_=0;
+#endif
     blocks_ = fetched_ = timeouts_ = overflows_ = vad_speech_ = 0;
     for (int i=0; i<2; ++i) { peak_[i]=0; rms_[i]=0; clipped_[i]=0; }
     char *model_name = nullptr;
@@ -154,6 +160,7 @@ bool WakeWordController::cleanup()
 {
     stop_ = true;
 #if CONFIG_NOMI_VOICE_COMMANDS
+    trace_.off();
     player_.cancel(audio_);reply_muted_=false;reply_release_at_=0;
     if(sayings_)xQueueReset(sayings_);
 #endif
@@ -204,6 +211,7 @@ void WakeWordController::capture_loop()
                     clipped_[ch].fetch_add(level.clipped[ch]);
                 }
 #if CONFIG_NOMI_VOICE_COMMANDS
+                trace_.feed(1,mono_,chunk_,reply_muted_);
                 uint32_t requested_epoch=0;
                 if(xQueueReceive(sayings_,&requested_epoch,0)==pdTRUE) {
                     if(requested_epoch!=session_epoch_ || epoch_!=session_epoch_)break;
@@ -261,10 +269,17 @@ void WakeWordController::fetch_loop()
             const bool muted=reply_muted_.load();
             if(muted!=muted_last)recognizer_.reset();
             muted_last=muted;
-            if(muted) {++fetched_;continue;}
-            if (!recognizer_.consume(result->data, size_t(result->data_size)/sizeof(int16_t), voice_events_, session_epoch_)) {
-                ++dropped_; fault("MultiNet inference/result queue"); continue;
-            }
+            if(muted) {trace_.feed(2,result->data,size_t(result->data_size)/2,true);++fetched_;continue;}
+            if(!consume_afe(result->data,result->data_size,result->vad_cache,result->vad_cache_size,
+                [&](const int16_t *pcm,size_t samples,bool cache){
+                    uint32_t peak=0;uint64_t energy=0;
+                    for(size_t i=0;i<samples;++i){const int32_t x=pcm[i];peak=std::max(peak,uint32_t(x<0?-x:x));energy+=int64_t(x)*x;}
+                    if(peak>afe_peak_)afe_peak_=peak;
+                    afe_rms_=uint32_t(std::sqrt(double(energy)/samples));if(!peak)++afe_zero_;
+                    if(cache)cache_samples_.fetch_add(samples);
+                    trace_.feed(2,pcm,samples,false);
+                    return recognizer_.consume(pcm,samples,voice_events_,session_epoch_);
+                })) {++dropped_;fault("AFE cache/PCM or MultiNet inference/result queue");continue;}
 #endif
             ++fetched_;
             if (result->vad_state == VAD_SPEECH) ++vad_speech_;
@@ -292,9 +307,15 @@ void WakeWordController::status() const
              (unsigned long)peak_[0].load(), (unsigned long)rms_[0].load(), (unsigned long)clipped_[0].load(),
              (unsigned long)peak_[1].load(), (unsigned long)rms_[1].load(), (unsigned long)clipped_[1].load());
 #if CONFIG_NOMI_VOICE_COMMANDS
+    trace_.status();
+    ESP_LOGI(TAG,"AFE_PCM peak_hold=%lu rms=%lu zero_chunks=%lu restored_cache_samples=%lu",
+        (unsigned long)afe_peak_.load(),(unsigned long)afe_rms_.load(),(unsigned long)afe_zero_.load(),(unsigned long)cache_samples_.load());
     recognizer_.status();
     ESP_LOGI(TAG, "MULTINET frames=%lu wake=%s", (unsigned long)recognizer_.frames(), CONFIG_NOMI_VOICE_WAKE_LABEL);
 #endif
+    ESP_LOGI(TAG,"HEAP internal_free=%u internal_largest=%u psram_free=%u psram_largest=%u min_total_free=%u",
+        unsigned(heap_caps_get_free_size(MALLOC_CAP_INTERNAL)),unsigned(heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL)),
+        unsigned(heap_caps_get_free_size(MALLOC_CAP_SPIRAM)),unsigned(heap_caps_get_largest_free_block(MALLOC_CAP_SPIRAM)),unsigned(esp_get_minimum_free_heap_size()));
     // Snapshot includes AFE's own tasks and both idle tasks, not just our two workers.
     static TaskStatus_t snapshot[24];
     configRUN_TIME_COUNTER_TYPE total = 0;

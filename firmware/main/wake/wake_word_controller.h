@@ -5,6 +5,7 @@
 #include "voice_session.h"
 #include "command_recognizer.h"
 #include "fixed_reply_player.h"
+#include "audio_trace.h"
 #include "esp_afe_sr_models.h"
 #include "model_path.h"
 #include "freertos/event_groups.h"
@@ -23,6 +24,25 @@ public:
     bool faulted() const { return failed_.load(); }
     void status() const;
     bool say_okay(uint32_t epoch);
+    bool trace_on(uint32_t token) {
+#if CONFIG_NOMI_VOICE_COMMANDS
+        trace_.on(token);return true;
+#else
+        (void)token;return false;
+#endif
+    }
+    void trace_off(){
+#if CONFIG_NOMI_VOICE_COMMANDS
+        trace_.off();
+#endif
+    }
+    void trace_ping(uint32_t token){
+#if CONFIG_NOMI_VOICE_COMMANDS
+        trace_.ping(token);
+#else
+        (void)token;
+#endif
+    }
     bool request_threshold(unsigned score) {
 #if CONFIG_NOMI_VOICE_COMMANDS
         return recognizer_.request_threshold(score);
@@ -58,7 +78,9 @@ private:
     QueueHandle_t requests_ = nullptr, events_ = nullptr;
     QueueHandle_t voice_events_ = nullptr;
 #if CONFIG_NOMI_VOICE_COMMANDS
+    AudioTrace trace_;
     CommandRecognizer recognizer_;
+    std::atomic<uint32_t> afe_peak_{0},afe_rms_{0},afe_zero_{0},cache_samples_{0};
     FixedReplyPlayer player_;
     QueueHandle_t sayings_ = nullptr;
     uint64_t reply_release_at_ = 0; // capture owner

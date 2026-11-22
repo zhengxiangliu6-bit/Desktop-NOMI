@@ -28,7 +28,12 @@ private:
     std::atomic<unsigned> requested_{90},active_{90};
     std::atomic<int> candidate_id_{0};
     std::atomic<float> candidate_score_{0};
-    uint64_t last_report_=0; // inference task only
+    bool install_commands(bool diagnostic);
+    bool self_test();
+    std::atomic<bool> selftest_passed_{false};
+    std::atomic<uint32_t> last_us_{0},max_us_{0},mean_us_{0},over_budget_{0};
+    uint64_t timing_sum_=0;
+    unsigned timing_count_=0;
     void report_result(const esp_mn_results_t *result,const char *source);
 };
 }

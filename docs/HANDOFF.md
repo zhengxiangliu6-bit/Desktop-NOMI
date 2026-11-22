@@ -1,3 +1,35 @@
+# 当前0.6.3：VAD输入修正、模型自检与双路串口音频
+
+用户反馈0.6.2调到0.60仍detected=0、模型timeouts增长，采音/AFE/MultiNet帧继续实时前进，无DMA溢出。随后明确要求判断资源是否跑不动，并把识别前音频与ESP结果发送串口。当前没有证据支持“卡死”，旧日志缺堆/实际推理耗时，不把任务累计时间冒称模型CPU百分比。完整中文转录仍不在MultiNet能力内。
+
+## 证据与边界
+
+- 从干净6887d88新建fix/h3-model-input-audio-trace，fetch最新main但不合并/创建PR。已查固定ESP-SR 1c0503e接口/文档/实际词表代码：中文拼音仍正确、数据16k/PCM16/mono，不能乱改名字或板型引脚。
+- **已确认代码遗漏**：esp_afe_sr_iface.h说明vad_cache用于补回截断音频，固定版本AFE文档要求前置；旧fetch忽略它。新增consume_afe验证指针/字节数/对齐/上界，cache→data顺序送模型，统计restored_cache_samples。可能造成短指令开头丢失，仍未证明这是本次唯一根因。
+- 不再盲降门槛。现有voice threshold保留以0.60作为前后对照；不将0.60称准确率。用户词表、20秒会话、14表情和私有回复原样保留。
+
+## 模型/资源自检
+
+- prepare_voice_fixture.py从同一固定ESP-SR提交提取公开官方打开空调PCM，验证原头SHA256和派生PCM SHA256，生成到Git忽略的.generated，99,610bytes/49,805samples/16kHz。随包保留原Apache2.0与诊断来源NOTICE；不是用户录音、不上传私人声音。
+- commands开机在板上用临时单词表和静音/官方PCM自检：不会播放/发送动作/入事件队列。恢复17个原指令、打印实际模型词表，才能开麦。selftest失败直接Fault而非绿色假可用。silence=0表示静音误报，reference=0表示已知直送样本未命中，不能直接等同内存不足；PASS仍不证明小米同学或麦克风通过。
+- MN_RUNTIME报告推理调用墙钟last/每32次mean/max/帧预算及超预算次数（包括调度等待，不是纯CPU百分比）；HEAP报告internal/PSRAM free与largest及最低总堆；AFE_PCM为实际送模型电平/零块/恢复缓存数。所有已知资源异常仍fail closed，FaceModel渲染保持独立。
+
+## 串口音频与显示工具
+
+- AudioTrace/TraceFramer：显式trace on/token开启，CH1原始MIC1、CH2正常识别时恢复VAD缓存后的AFE流；独立序号、320样本连续帧/FNV/flags/base64，@NTRC1与PC识别NOMI2分离。捕获/推理各自拥有缓冲，不插零凑AFE块；停止不足20ms尾部不发送。
+- 每次USB写有界等待，IDF驱动完整帧原子入环；慢主机/丢失心跳2s关追踪，保留本地识别。原始流在播放保护中仍可能含真实声音，带flags，AFE流保护期间不供模型识别。默认不开传输、不保存/上传。
+- @NRES1原子输出每个DETECTED最高候选ID/配置中文标签/分数，非任意中文转录。无候选不编造词；底层传输背压可能丢诊断文本，但detected计数仍可靠。不因日志当作控制动作，原USB控制ACK不变。
+- tools/local_voice_debug/monitor.py + start_debug.cmd随commands包，只用pyserial和标准库，不安装/调用电脑ASR或云端。显示双路电平与ESP32候选，默认20秒后关追踪，不关设备本地麦克风；显式--record-dir才写两个WAV，拒绝覆盖旧文件、校验失败不补静音，异常也关闭文件。原用户音频只从仓库外导入私有包。
+
+## 文件与软件验证
+
+- 修改main/voice/command_recognizer.*、wake_controller.*、main、CMake/构建脚本/CI/版本0.6.3；新增afe_input.h、audio_trace.*、trace_framer.h、prepare_voice_fixture.py、诊断NOTICE、debug工具、LOCAL_VOICE_TRACE和相关原生/Python测试；同步H1/H2/README/离线/API/架构/路线图。未接AI/云端ASR/动态TTS/触摸。
+- 本地commands初步目标构建通过；后续增加候选原子输出初轮缺cstdio编译失败，已补显式包含，最终构建另记，不将失败写成通过。临时单词表ID使用官方示例同样的1，避免未承诺大ID范围。
+- 已执行原生CTest10/10、Python10/10、PC22/22、共享目录--check、actionlint/diff；真实C++TraceFramer→Python解码2560样本逐值一致/CRC通过；PTY模拟CLI两轮通过（默认不录音、显式双WAV内容一致，均无ASR加载）。不将模拟串口或模型fixture校验冒称板上自检PASS。
+- 实体自检、双路USB吞吐/电平/缓存恢复、推理/堆/栈、准确激活/误触发、用户回复/回灌、30分钟稳定仍待用户验证。下一轮第一步看自动MN_SELFTEST，不需反复喊；FAIL分别看silence/reference，再决定模型层或输入层排查。
+
+---
+
 # 当前0.6.2：本地未激活的诊断与门槛校准
 
 用户0.6.1实测绿色但叫名无反应。两次状态约13.23秒内frames/blocks/fetched增413、vad_speech增244，timeouts/overflows/dropped为0，无重启证据；这里旧timeouts为采音无数据，不是模型超时。仅能确认数据/推理循环持续运行，不证明有效激活。不能把问题归因用户发音或烧录失败，不保存用户原日志/音频。

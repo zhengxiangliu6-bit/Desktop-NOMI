@@ -1,3 +1,5 @@
+> **0.6.3输入诊断**：修正AFE VAD缓存补回，新增板上官方PCM自检、原始/AFE双路串口音频和推理/堆统计。电脑只接收、不参与识别；默认不录音。新版本尚待实机验证，见[调试步骤](LOCAL_VOICE_TRACE.md)。
+
 > **0.6.2校准诊断版**：0.6.1用户日志显示采音/AFE/MultiNet帧持续增加，但未报告激活。现有证据不能确定根因；旧代码模型与UI两层0.90门槛是待检验因素，不是已证明原因。新版默认仍0.90，新增`voice threshold 60`临时设置模型和会话门槛到0.60（不是60%准确率），在推理任务应用并清旧decoder；重启恢复0.90，wake reinit沿用本轮设置。范围30–95，不自动保存。改变门槛会结束当前会话，等待`VOICE_THRESHOLD_APPLIED`再说话。
 
 > 调试输出：`VOICE_CANDIDATE`只打印模型实际DETECTED时最高候选的配置ID/标签/分数（限每秒一条），不是任意中文转录；没有结果时不编造候选。`wake status`新增`MN_DIAGNOSTIC`的detected/timeouts/below_gate/last_id/last_score/active_threshold/requested。last_id/last_score是历史最后候选，不能当成本句识别。

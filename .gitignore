@@ -49,3 +49,6 @@ build/
 .idea/
 .DS_Store
 Thumbs.db
+
+# Verified upstream diagnostics, generated from pinned public source
+firmware/.generated/

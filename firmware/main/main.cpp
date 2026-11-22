@@ -84,6 +84,10 @@ void command(const char *text, uint64_t now)
 {
     if (!std::strcmp(text, "status")) { status(); return; }
 #if CONFIG_NOMI_VOICE_COMMANDS
+    unsigned long trace_token=0;char trace_tail=0;
+    if(std::sscanf(text,"trace on %8lx %c",&trace_token,&trace_tail)==1) {wake.trace_on(uint32_t(trace_token));ESP_LOGI(TAG,"TRACE_STARTED: raw MIC1 + restored AFE; host display only");return;}
+    if(std::sscanf(text,"trace ping %8lx %c",&trace_token,&trace_tail)==1) {wake.trace_ping(uint32_t(trace_token));return;}
+    if(!std::strcmp(text,"trace off")){wake.trace_off();ESP_LOGI(TAG,"TRACE_OFF");return;}
     unsigned score=0;char extra=0;
     if(!std::strncmp(text,"voice threshold",15)) {
         if(std::sscanf(text,"voice threshold %u %c",&score,&extra)!=1 || !wake.request_threshold(score)) {
@@ -168,7 +172,7 @@ extern "C" void app_main()
     ESP_LOGI(TAG, "PSRAM initialized=%d size=%u", esp_psram_is_initialized(), unsigned(esp_psram_get_size()));
     usb_serial_jtag_driver_config_t serial = {};
     serial.rx_buffer_size = 256;
-#if CONFIG_NOMI_USB_ASR
+#if CONFIG_NOMI_USB_ASR || CONFIG_NOMI_VOICE_COMMANDS
     serial.tx_buffer_size = 4096; // PCM + bounded complete control replies.
 #else
     serial.tx_buffer_size = 1024;
