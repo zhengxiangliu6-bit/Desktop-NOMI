@@ -23,7 +23,7 @@ python debug\monitor.py --port COM3 --seconds 20 --threshold 60
 
 调试程序显示原始音频/AFE各自有效帧、peak/RMS以及ESP32日志；`@NRES1 ... label=...`是模型返回的有限配置标签，不是任意讲话的中文转录。模型没返回指令时只报告detected=0/超时，不编造文字。电脑没有“重新识别”的隐藏步骤。
 
-需要自己试听两路音频时，**显式**指定仓库外目录：
+若双路传输发生TRACE_STOPPED背压，可加`--source raw`或`--source afe`分别采集，不需要再烧录，也不改变设备本地识别。需要自己试听两路音频时，**显式**指定仓库外目录：
 
 ```bat
 python debug\monitor.py --port COM3 --seconds 20 --threshold 60 --record-dir D:\NOMI-capture-063
@@ -37,7 +37,7 @@ python debug\monitor.py --port COM3 --seconds 20 --threshold 60 --record-dir D:\
 
 音频不直接打印成中文：终端无法把PCM当可听声音，接收工具解包后显示电平，可选写WAV试听。完整音频在串口中是`@NTRC1 token seq channel flags checksum base64`，和旧PC识别的`@NOMI2`区分。候选标签用`@NRES1 id/label/score/gate/source`一次驱动写入，避免音频帧插入中文日志中间；这是诊断输出，不作为控制回执。音频帧FNV校验覆盖token/序号/通道/flags/PCM，通道独立序号；512等AFE块累计成320样本，不在块边界插零凑块或丢样（停止时不足20ms的尾部不发送）。工具校验后才显示/写文件。
 
-追踪默认关闭，显式trace on才开启；每次开启使用新token；工具自动生成。需要0.5秒心跳，断线2秒停止追踪；每次USB写等待≤2个RTOS tick（驱动先等互斥再等环形缓冲，调度还可增加墙钟时间），背压则停止追踪，本地识别继续，不让慢电脑无限卡住推理。停止追踪不关设备麦克风（本地识别仍运行）；需要停止本地采音用wake off。
+追踪默认关闭，显式trace on才开启（可选channels掩码1=raw、2=AFE、3=双路）；每次开启使用新token；工具自动生成。需要0.5秒心跳，断线2秒停止追踪；每次USB写等待≤2个RTOS tick（驱动先等互斥再等环形缓冲，调度还可增加墙钟时间），背压则停止追踪，本地识别继续，不让慢电脑无限卡住推理。停止追踪不关设备麦克风（本地识别仍运行）；需要停止本地采音用wake off。
 
 ## 需要回传的最少证据
 

@@ -28,6 +28,7 @@ class TraceParser:
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--port',default='COM3')
+    parser.add_argument('--source',choices=['both','raw','afe'],default='both',help='Receive both streams or one at a time to reduce USB traffic')
     parser.add_argument('--seconds',type=float,default=20)
     parser.add_argument('--threshold',type=int,choices=range(30,96),metavar='30..95')
     parser.add_argument('--record-dir',type=Path,help='Explicit optional WAV recording folder; no files otherwise')
@@ -38,6 +39,7 @@ def main():
     print('[说明] CH1=麦克风原始PCM，CH2=AFE输出(正常识别期间含恢复的VAD开头)。模型未命中时没有完整中文转录。',flush=True)
     print('[录音] '+('显式保存两个WAV到 '+str(args.record_dir) if args.record_dir else '不保存音频或文字'),flush=True)
     input('先关闭miniterm/旧PC语音程序；按Enter开始串口调试，Ctrl+C停止：')
+    channels=[1,2] if args.source=='both' else [1] if args.source=='raw' else [2]
     token=secrets.randbelow(0xffffffff)+1;frames=TraceParser(token);files={};buffer=bytearray()
     guarded={1:0,2:0};peaks={1:0,2:0};energies={1:0,2:0};samples={1:0,2:0};last=0;next_report=0;candidates=0;reported_candidates=0
     with serial.Serial(args.port,115200,timeout=.05,write_timeout=.5) as port:
@@ -46,13 +48,14 @@ def main():
                 args.record_dir.mkdir(parents=True,exist_ok=True)
                 # Do not overwrite an earlier diagnostic recording.
                 for ch,name in [(1,'raw-mic1.wav'),(2,'afe-output.wav')]:
+                    if ch not in channels:continue
                     handle=(args.record_dir/name).open('xb')
                     try:w=wave.open(handle,'wb');w.setnchannels(1);w.setsampwidth(2);w.setframerate(16000)
                     except BaseException:handle.close();raise
                     files[ch]=(w,handle)
             port.write(b'status\r\n')
             if args.threshold is not None:port.write(f'voice threshold {args.threshold}\r\n'.encode())
-            port.write(f'trace on {token:08x}\r\n'.encode())
+            port.write(f'trace on {token:08x} {sum(1<<(ch-1) for ch in channels)}\r\n'.encode())
             start=time.monotonic()
             while time.monotonic()-start<args.seconds:
                 now=time.monotonic()
@@ -75,6 +78,7 @@ def main():
                     elif line.strip():print('[ESP32] '+line.decode('utf-8',errors='replace').strip(),flush=True)
                 if now>=next_report:
                     for ch,label in [(1,'识别前 MIC1'),(2,'AFE输出')]:
+                        if ch not in channels:continue
                         rms=int((energies[ch]/samples[ch])**.5) if samples[ch] else 0
                         print(f'[音频 {label}] 有效帧={frames.frames[ch]} peak={peaks[ch]} rms={rms} 保护帧={guarded[ch]}',flush=True)
                         peaks[ch]=energies[ch]=samples[ch]=guarded[ch]=0

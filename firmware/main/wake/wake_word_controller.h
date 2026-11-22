@@ -24,11 +24,11 @@ public:
     bool faulted() const { return failed_.load(); }
     void status() const;
     bool say_okay(uint32_t epoch);
-    bool trace_on(uint32_t token) {
+    bool trace_on(uint32_t token,unsigned channels=3) {
 #if CONFIG_NOMI_VOICE_COMMANDS
-        trace_.on(token);return true;
+        trace_.on(token,channels);return true;
 #else
-        (void)token;return false;
+        (void)token;(void)channels;return false;
 #endif
     }
     void trace_off(){

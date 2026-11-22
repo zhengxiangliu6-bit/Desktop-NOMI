@@ -84,8 +84,9 @@ void command(const char *text, uint64_t now)
 {
     if (!std::strcmp(text, "status")) { status(); return; }
 #if CONFIG_NOMI_VOICE_COMMANDS
-    unsigned long trace_token=0;char trace_tail=0;
-    if(std::sscanf(text,"trace on %8lx %c",&trace_token,&trace_tail)==1) {wake.trace_on(uint32_t(trace_token));ESP_LOGI(TAG,"TRACE_STARTED: raw MIC1 + restored AFE; host display only");return;}
+    unsigned long trace_token=0;char trace_tail=0;unsigned trace_channels=3;
+    const auto trace_fields=std::sscanf(text,"trace on %8lx %u %c",&trace_token,&trace_channels,&trace_tail);
+    if((trace_fields==1 || trace_fields==2) && trace_token && trace_channels>=1 && trace_channels<=3) {wake.trace_on(uint32_t(trace_token),trace_channels);ESP_LOGI(TAG,"TRACE_STARTED: raw MIC1 + restored AFE; host display only");return;}
     if(std::sscanf(text,"trace ping %8lx %c",&trace_token,&trace_tail)==1) {wake.trace_ping(uint32_t(trace_token));return;}
     if(!std::strcmp(text,"trace off")){wake.trace_off();ESP_LOGI(TAG,"TRACE_OFF");return;}
     unsigned score=0;char extra=0;
