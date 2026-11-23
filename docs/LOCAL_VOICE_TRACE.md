@@ -63,3 +63,21 @@ python debug\monitor.py --port COM3 --seconds 20 --threshold 60 --record-dir D:\
 这两条测试仍需在设备上执行；编译和原生逻辑测试不等于模型实测通过。若factory成功而custom失败，重点看动态词表；若二者均失败，才继续查默认模型/库/推理路径，不先责怪用户讲话或麦克风。
 
 即使模型失败，本版仍启动独立的麦克风/AFE音频诊断，状态点保持红色、`DETECTOR ready=0`，没有候选也不执行动作；raw/AFE音频可按之前monitor命令接收或显式录WAV。音频诊断不是绕过模型自检执行指令。若音频初始化本身失败，则仍停止采音并报告实际硬件错误。
+
+## 0.6.5 从 Windows 源码目录迭代
+
+本轮实体对照中默认词表识别 ID25 成功，运行时改词表后同一音频没有结果。commands 构建现在将 NOMI 词表写入模型分区，启动时核对每个 ID 和拼音，并直接测试打包词表。ID25 只用于验证，业务会话不接受它。实体通过标记为 `MN_REFERENCE stage=bundled_table pass=1`。
+
+在 ESP-IDF 5.5.4 命令窗口执行以下命令。第一次克隆后，同目录可用 `git pull --ff-only` 更新，并保留增量构建缓存。
+
+```bat
+if not exist D:\codex mkdir D:\codex
+cd /d D:\codex
+git clone --branch fix/h3-bundled-command-table https://github.com/zhengxiangliu6-bit/Desktop-NOMI.git Desktop-NOMI
+cd Desktop-NOMI
+python firmware\scripts\build.py --profile commands
+cd firmware\build-commands
+python -m esptool --chip esp32s3 --port COM3 --baud 460800 write_flash "@flash_args"
+```
+
+有私人回复素材时，在构建命令加 `--reply-assets` 指向之前导入的目录。源码的默认音频是项目占位音。用仓库的 build.py 生成模型分区后再按 flash_args 写入程序和模型。

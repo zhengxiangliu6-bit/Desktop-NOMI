@@ -152,9 +152,9 @@ Commands: status / demo / wake off / wake on / wake reinit / wake status
 See manifest.json for offsets, SHA256 and model identity.
 '''
     if profile == "commands":
-        readme += "\nOFFLINE 0.6.4: 14 local face commands + fixed reply; no PC application needed.\nRead docs/OFFLINE_COMMAND_REPLY.md. WAV replacement needs rebuild + reflash.\n"
+        readme += "\nOFFLINE 0.6.5: 14 local face commands + fixed reply; no PC application needed.\nRead docs/OFFLINE_COMMAND_REPLY.md. WAV replacement needs rebuild + reflash.\n"
     if profile == "usb_asr":
-        readme = """Desktop-NOMI 14 expression gallery + fixed spoken OK / firmware 0.6.4
+        readme = """Desktop-NOMI 14 expression gallery + fixed spoken OK / firmware 0.6.5
 Board: Waveshare ESP32-S3-Touch-LCD-1.85B ONLY
 Device captures audio. ASR runs LOCALLY on Windows.
 0.6.0 shares the fixed player with offline commands; PC0.5.0 remains compatible; playback guard temporarily suppresses microphone ASR.
@@ -207,6 +207,17 @@ def main():
         defaults += ";" + str(ROOT / ("sdkconfig." + options.profile))
     subprocess.run([sys.executable, str(idf), "-B", str(build), "-D", f"SDKCONFIG={config}",
                     "-D", f"SDKCONFIG_DEFAULTS={defaults}", "-D", f"NOMI_REPLY_ASSET_DIR={ASSETS.as_posix()}", "build", "size"], cwd=ROOT, check=True)
+    if options.profile == "commands":
+        from bundle_commands import bundle_commands
+        image = build / "srmodels/srmodels.bin"
+        config_json = json.loads((build / "config/sdkconfig.json").read_text(encoding="utf-8"))
+        bundled = bundle_commands(image.read_bytes(),
+            (ROOT / "main/voice/voice_session.h").read_text(encoding="utf-8"),
+            config_json["NOMI_VOICE_WAKE_PINYIN"])
+        if bundled != image.read_bytes():
+            temporary = image.with_suffix(".tmp")
+            temporary.write_bytes(bundled)
+            temporary.replace(image)
     args = validate(build, options.profile)
     if options.package:
         package(build, options.profile, config, args)

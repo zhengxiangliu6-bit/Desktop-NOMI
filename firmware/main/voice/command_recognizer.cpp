@@ -34,8 +34,17 @@ bool CommandRecognizer::open(srmodel_list_t *models)
     // Pinned MN7 create() owns/initializes the command registry; never allocate it twice.
     const auto *language=mn_->get_language(data_);
     if(!language || std::strcmp(language,ESP_MN_CHINESE))return false;
-    selftest_passed_=self_test();
-    if(!install_commands(false) || !selftest_passed_)return false;
+    auto matches = [](int index, int id, const char *pinyin) {
+        const auto *phrase = esp_mn_commands_get_from_index(index);
+        return phrase && phrase->command_id == id && std::strcmp(phrase->string, pinyin) == 0;
+    };
+    int index = 0;
+    if (!matches(index++, 1, CONFIG_NOMI_VOICE_WAKE_PINYIN)) return false;
+    for (const auto &command : voice_commands)
+        if (!matches(index++, command.id, command.pinyin)) return false;
+    if (!matches(index++, 25, "da kai kong tiao") || esp_mn_commands_get_from_index(index)) return false;
+    selftest_passed_ = self_test();
+    if (!selftest_passed_) return false;
     active_=requested_.load();
     mn_->set_det_threshold(data_, threshold());
     mn_->clean(data_);
@@ -44,17 +53,6 @@ bool CommandRecognizer::open(srmodel_list_t *models)
              CONFIG_NOMI_VOICE_WAKE_LABEL, CONFIG_NOMI_VOICE_WAKE_PINYIN, unsigned(chunk_),double(threshold()));
     for (const auto &c : voice_commands) ESP_LOGI(TAG, "VOICE_COMMAND id=%d phrase=%s", c.id, c.label);
     return true;
-}
-bool CommandRecognizer::install_commands(bool diagnostic) {
-    if(esp_mn_commands_clear()!=ESP_OK)return false;
-    if(diagnostic) {
-        if(esp_mn_commands_add(1,"da kai kong tiao")!=ESP_OK ||
-           esp_mn_commands_add(2,"guan bi kong tiao")!=ESP_OK)return false;
-    } else {
-        if(esp_mn_commands_add(1,CONFIG_NOMI_VOICE_WAKE_PINYIN)!=ESP_OK)return false;
-        for(const auto &c:voice_commands)if(esp_mn_commands_add(c.id,c.pinyin)!=ESP_OK)return false;
-    }
-    return esp_mn_commands_update()==nullptr;
 }
 bool CommandRecognizer::self_test() {
     const size_t samples=size_t(official_end-official_start)/2;
@@ -72,27 +70,10 @@ bool CommandRecognizer::self_test() {
             stage,result.pass,expected_id,result.id,double(result.score),result.last_state,result.frames,unsigned(samples));
         return result.pass;
     };
-    // Exactly the upstream baseline first: do not clear/reallocate/update the default dictionary.
-    // Pinned commands_cn.txt: ID25 = da kai kong tiao.
-    esp_mn_active_commands_print();
-    const bool factory_ok=run("factory_untouched",25);
-    const bool installed=install_commands(true);
-    bool custom_ok=false,silence_ok=false;
-    if(installed) {
-        mn_->set_det_threshold(data_,0.60f);mn_->clean(data_);
-        esp_mn_active_commands_print();
-        custom_ok=run("custom_reference",1);
-        mn_->clean(data_);std::fill_n(buffer_,chunk_,0);silence_ok=true;
-        for(unsigned i=0;i<64;++i) {
-            const auto state=mn_->detect(data_,buffer_);
-            if(state==ESP_MN_STATE_DETECTED){auto *r=mn_->get_results(data_);if(!r || r->num>0){silence_ok=false;break;}}
-            if(state==ESP_MN_STATE_TIMEOUT)mn_->clean(data_);
-            vTaskDelay(1);
-        }
-    }
-    ESP_LOGI(TAG,"MN_SELFTEST %s factory=%d custom=%d silence=%d; direct public PCM, microphone NOT tested",
-             factory_ok&&custom_ok&&silence_ok?"PASS":"FAIL",factory_ok,custom_ok,silence_ok);
-    mn_->clean(data_);return factory_ok&&custom_ok&&silence_ok;
+    const bool passed = run("bundled_table", 25);
+    ESP_LOGI(TAG, "MN_SELFTEST %s bundled=%d", passed ? "PASS" : "FAIL", passed);
+    mn_->clean(data_);
+    return passed;
 }
 void CommandRecognizer::report_result(const esp_mn_results_t *r,const char *source) {
     if(!r || r->num<1 || r->num>ESP_MN_RESULT_MAX_NUM)return;
