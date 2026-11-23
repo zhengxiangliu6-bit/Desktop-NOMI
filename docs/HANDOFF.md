@@ -1,3 +1,16 @@
+# 当前0.6.4：MN7词表所有权与默认路径对照
+
+用户0.6.3实测官方PCM在**定制测试词表**下reference=0、silence=1；模型初始化失败先于开麦，blocks/raw/AFE全部0是旧fail-closed设计关闭整条采音，不是硬件没声音的证据。模型曾分配到资源，最低总空闲约5.28MB，失败清理后PSRAM约8MB；后者不是运行期值，不断言内存不足或模型本体坏。原日志不入Git。
+
+- 从干净c52cb94独立fix/h3-multinet-command-lifecycle，保留不创建PR/不合并main。逐字对比model分区中6个文件与固定源码一致；官方样本经独立本地ASR确认内容打开空调，约1.42秒已给完整词、2.7秒结束（仅软件内容检查）。
+- 用Xtensa nm/objdump确认固定multinet7_quantized.c.obj model_create调用esp_mn_commands_alloc、model_destroy调用esp_mn_commands_free。去掉应用额外alloc/free及所有权布尔；修正重复清理not initialized错误，但不谎称已证实这就是检测失败唯一根因。
+- 之前selftest在测试前已clear/update默认词表，不能当官方默认路径对照。新顺序先factory_untouched（不改默认配置、预期ID25），再custom_reference（库已有词表上更新、ID1、0.60）、静音。窗口用上游6000ms；输出状态/样本/实际ID/帧数。新增纯reference_probe验证输入不丢样、补零、正确/错误ID、超时、非法参数与低分，不将纯逻辑单测当NN执行。
+- 模型未过时关闭识别/动作并保持Fault红色，但独立AudioInput/AFE/音频trace继续；所有结果门控维持关闭，供用户要求的原始音频诊断。硬件/I2S/AFE故障仍真正停止采音。模型和采音所有权分离，清理不重复销毁词表。
+- 修改recognizer、wake_controller、reference_probe及其测试、版本0.6.4/CI/构建说明、LOCAL_VOICE_TRACE/API/架构/路线图。用户私有PCM不变，不上传公开Git或Actions；默认词表仅自检临时使用，不执行家电动作、不更换激活名。
+- 原生CTest11/11初轮通过；commands初次目标编译另记。最终提交后重建私有包与软件检查；两条NN自检/实际麦克风/唤醒/播放/误触发/30分钟仍需实体执行，不宣称已修好识别。
+
+---
+
 # 当前0.6.3：VAD输入修正、模型自检与双路串口音频
 
 用户反馈0.6.2调到0.60仍detected=0、模型timeouts增长，采音/AFE/MultiNet帧继续实时前进，无DMA溢出。随后明确要求判断资源是否跑不动，并把识别前音频与ESP结果发送串口。当前没有证据支持“卡死”，旧日志缺堆/实际推理耗时，不把任务累计时间冒称模型CPU百分比。完整中文转录仍不在MultiNet能力内。

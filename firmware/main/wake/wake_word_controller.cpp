@@ -112,7 +112,11 @@ bool WakeWordController::initialize()
 #endif
 #if CONFIG_NOMI_VOICE_COMMANDS
     models_ = esp_srmodel_init("model");
-    if (!recognizer_.open(models_)) { fault("MultiNet model/commands initialization"); return false; }
+    detector_ready_=recognizer_.open(models_);
+    if(!detector_ready_) {
+        recognizer_.close();
+        ESP_LOGE(TAG,"DETECTOR_DISABLED: model/selftest failed; raw/AFE audio diagnostics stay available, no voice actions");
+    }
 #endif
     auto *cfg = afe_config_init("M", models_, AFE_TYPE_SR, AFE_MODE_LOW_COST);
     if (!cfg) { fault("AFE config allocation"); return false; }
@@ -153,7 +157,11 @@ bool WakeWordController::initialize()
     xEventGroupClearBits(sync_, FETCH_DONE);
     fetch_started_ = true;
     xTaskNotifyGive(fetch_task_);
-    state_ = WakeState::Monitoring;
+#if CONFIG_NOMI_VOICE_COMMANDS
+    state_=detector_ready_?WakeState::Monitoring:WakeState::Fault;
+#else
+    state_=WakeState::Monitoring;
+#endif
     return true;
 }
 bool WakeWordController::cleanup()
@@ -174,7 +182,7 @@ bool WakeWordController::cleanup()
     if (afe_data_) { afe_->destroy(afe_data_); afe_data_ = nullptr; }
     afe_ = nullptr;
 #if CONFIG_NOMI_VOICE_COMMANDS
-    recognizer_.close();
+    recognizer_.close();detector_ready_=false;
 #endif
     if (models_) { esp_srmodel_deinit(models_); models_ = nullptr; }
     heap_caps_free(stereo_); heap_caps_free(mono_); stereo_ = mono_ = nullptr;
@@ -278,7 +286,7 @@ void WakeWordController::fetch_loop()
                     afe_rms_=uint32_t(std::sqrt(double(energy)/samples));if(!peak)++afe_zero_;
                     if(cache)cache_samples_.fetch_add(samples);
                     trace_.feed(2,pcm,samples,false);
-                    return recognizer_.consume(pcm,samples,voice_events_,session_epoch_);
+                    return !detector_ready_ || recognizer_.consume(pcm,samples,voice_events_,session_epoch_);
                 })) {++dropped_;fault("AFE cache/PCM or MultiNet inference/result queue");continue;}
 #endif
             ++fetched_;
@@ -307,6 +315,7 @@ void WakeWordController::status() const
              (unsigned long)peak_[0].load(), (unsigned long)rms_[0].load(), (unsigned long)clipped_[0].load(),
              (unsigned long)peak_[1].load(), (unsigned long)rms_[1].load(), (unsigned long)clipped_[1].load());
 #if CONFIG_NOMI_VOICE_COMMANDS
+    ESP_LOGI(TAG,"DETECTOR ready=%d; audio capture is independent of model success",int(detector_ready_.load()));
     trace_.status();
     ESP_LOGI(TAG,"AFE_PCM peak_hold=%lu rms=%lu zero_chunks=%lu restored_cache_samples=%lu",
         (unsigned long)afe_peak_.load(),(unsigned long)afe_rms_.load(),(unsigned long)afe_zero_.load(),(unsigned long)cache_samples_.load());

@@ -1,4 +1,5 @@
 #include "command_recognizer.h"
+#include "reference_probe.h"
 #if CONFIG_NOMI_VOICE_COMMANDS
 #include <algorithm>
 #include <cstring>
@@ -22,7 +23,7 @@ bool CommandRecognizer::open(srmodel_list_t *models)
     if (!name || std::strcmp(name, "mn7_cn")) return false;
     mn_ = esp_mn_handle_from_name(name);
     if (!mn_) return false;
-    data_ = mn_->create(name, 4000);
+    data_ = mn_->create(name, 6000);
     if (!data_) return false;
     if (mn_->get_samp_rate(data_) != 16000) return false;
     const int chunk = mn_->get_samp_chunksize(data_);
@@ -30,8 +31,7 @@ bool CommandRecognizer::open(srmodel_list_t *models)
     chunk_ = size_t(chunk);
     buffer_ = static_cast<int16_t *>(heap_caps_malloc(chunk_*sizeof(int16_t), MALLOC_CAP_SPIRAM|MALLOC_CAP_8BIT));
     if (!buffer_) return false;
-    if (esp_mn_commands_alloc(mn_, data_) != ESP_OK) return false;
-    commands_allocated_ = true;
+    // Pinned MN7 create() owns/initializes the command registry; never allocate it twice.
     const auto *language=mn_->get_language(data_);
     if(!language || std::strcmp(language,ESP_MN_CHINESE))return false;
     selftest_passed_=self_test();
@@ -56,41 +56,42 @@ bool CommandRecognizer::install_commands(bool diagnostic) {
     return esp_mn_commands_update()==nullptr;
 }
 bool CommandRecognizer::self_test() {
-    if(!install_commands(true))return false;
-    mn_->set_det_threshold(data_,0.60f);mn_->clean(data_);
-    // Silence negative control, then a known public sample; never enqueue UI events.
-    std::fill_n(buffer_,chunk_,0);
-    bool silence_ok=true;
-    for(unsigned i=0;i<130;++i) {
-        const auto state=mn_->detect(data_,buffer_);
-        if(state==ESP_MN_STATE_DETECTED){
-            auto *r=mn_->get_results(data_);
-            if(!r || r->num>0){silence_ok=false;break;}
-        }
-        if(state==ESP_MN_STATE_TIMEOUT)mn_->clean(data_);
-        vTaskDelay(1);
-    }
-    mn_->clean(data_);
     const size_t samples=size_t(official_end-official_start)/2;
     const auto *pcm=reinterpret_cast<const int16_t *>(official_start);
-    bool reference_ok=false;float score=0;
-    for(size_t offset=0;offset<samples+16000;offset+=chunk_) {
-        std::fill_n(buffer_,chunk_,0);
-        if(offset<samples)std::copy_n(pcm+offset,std::min(chunk_,samples-offset),buffer_);
-        const auto state=mn_->detect(data_,buffer_);
-        if(state==ESP_MN_STATE_DETECTED) {
-            auto *r=mn_->get_results(data_);
-            if(r && r->num>0 && r->num<=ESP_MN_RESULT_MAX_NUM) {
-                score=r->prob[0];reference_ok=r->command_id[0]==1 && std::isfinite(score) && score>=0.60f && score<=1.f;
+    auto run=[&](const char *stage,int expected_id) {
+        const auto result=probe_reference(pcm,samples,buffer_,chunk_,expected_id,[&](const int16_t *block){
+            ProbeDecision out;out.state=int(mn_->detect(data_,const_cast<int16_t *>(block)));
+            if(out.state==int(ESP_MN_STATE_DETECTED)) {
+                auto *r=mn_->get_results(data_);
+                if(r && r->num>0 && r->num<=ESP_MN_RESULT_MAX_NUM){out.id=r->command_id[0];out.score=r->prob[0];}
             }
-            break;
+            vTaskDelay(1);return out;
+        });
+        ESP_LOGI(TAG,"MN_REFERENCE stage=%s pass=%d expected=%d got=%d score=%.3f state=%d frames=%u samples=%u",
+            stage,result.pass,expected_id,result.id,double(result.score),result.last_state,result.frames,unsigned(samples));
+        return result.pass;
+    };
+    // Exactly the upstream baseline first: do not clear/reallocate/update the default dictionary.
+    // Pinned commands_cn.txt: ID25 = da kai kong tiao.
+    esp_mn_active_commands_print();
+    const bool factory_ok=run("factory_untouched",25);
+    const bool installed=install_commands(true);
+    bool custom_ok=false,silence_ok=false;
+    if(installed) {
+        mn_->set_det_threshold(data_,0.60f);mn_->clean(data_);
+        esp_mn_active_commands_print();
+        custom_ok=run("custom_reference",1);
+        mn_->clean(data_);std::fill_n(buffer_,chunk_,0);silence_ok=true;
+        for(unsigned i=0;i<64;++i) {
+            const auto state=mn_->detect(data_,buffer_);
+            if(state==ESP_MN_STATE_DETECTED){auto *r=mn_->get_results(data_);if(!r || r->num>0){silence_ok=false;break;}}
+            if(state==ESP_MN_STATE_TIMEOUT)mn_->clean(data_);
+            vTaskDelay(1);
         }
-        if(state==ESP_MN_STATE_TIMEOUT)break;
-        vTaskDelay(1);
     }
-    ESP_LOGI(TAG,"MN_SELFTEST %s silence=%d reference=%d score=%.3f; direct public PCM, microphone NOT tested",
-             silence_ok&&reference_ok?"PASS":"FAIL",silence_ok,reference_ok,double(score));
-    mn_->clean(data_);return silence_ok && reference_ok;
+    ESP_LOGI(TAG,"MN_SELFTEST %s factory=%d custom=%d silence=%d; direct public PCM, microphone NOT tested",
+             factory_ok&&custom_ok&&silence_ok?"PASS":"FAIL",factory_ok,custom_ok,silence_ok);
+    mn_->clean(data_);return factory_ok&&custom_ok&&silence_ok;
 }
 void CommandRecognizer::report_result(const esp_mn_results_t *r,const char *source) {
     if(!r || r->num<1 || r->num>ESP_MN_RESULT_MAX_NUM)return;
@@ -114,7 +115,7 @@ void CommandRecognizer::status() const {
 void CommandRecognizer::reset() { used_=0; if(data_) mn_->clean(data_); }
 void CommandRecognizer::close()
 {
-    if (commands_allocated_) { esp_mn_commands_free(); commands_allocated_ = false; }
+    // Pinned MN7 destroy() releases its registry. Application must not free it first.
     if (data_) { mn_->destroy(data_); data_ = nullptr; }
     mn_ = nullptr; heap_caps_free(buffer_); buffer_ = nullptr; used_ = chunk_ = 0;
 }

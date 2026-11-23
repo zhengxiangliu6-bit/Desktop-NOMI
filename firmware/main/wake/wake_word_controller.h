@@ -21,7 +21,7 @@ public:
     bool poll(WakeEvent &event);
     bool poll_voice(VoiceEvent &event);
     WakeState state() const { return state_.load(); }
-    bool faulted() const { return failed_.load(); }
+    bool faulted() const { return failed_.load() || state_.load()==WakeState::Fault; }
     void status() const;
     bool say_okay(uint32_t epoch);
     bool trace_on(uint32_t token,unsigned channels=3) {
@@ -78,6 +78,7 @@ private:
     QueueHandle_t requests_ = nullptr, events_ = nullptr;
     QueueHandle_t voice_events_ = nullptr;
 #if CONFIG_NOMI_VOICE_COMMANDS
+    std::atomic<bool> detector_ready_{false};
     AudioTrace trace_;
     CommandRecognizer recognizer_;
     std::atomic<uint32_t> afe_peak_{0},afe_rms_{0},afe_zero_{0},cache_samples_{0};

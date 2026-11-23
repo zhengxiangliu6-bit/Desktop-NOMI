@@ -47,3 +47,19 @@ python debug\monitor.py --port COM3 --seconds 20 --threshold 60 --record-dir D:\
 - 正常说1次“小米同学”和1次“开心一点”，记录实际候选和会话接受/忽略。未唤醒的普通指令只作候选诊断，不执行。完成后工具自动停止，保留最后状态。
 
 只有这些信息才能区分模型本身、采音、AFE丢头、分数/词表与性能问题。自检PASS仍不代表准确的小米同学专用WakeNet已经获得；现在仍是MultiNet有限匹配，不是任意中文ASR。旧0.6.2/0.6.1包可回退，原厂备份保留。
+
+## 0.6.4：默认词表对照与音频诊断解耦
+
+0.6.3用户实测：`silence=1 reference=0`，自检在开麦前失败，按旧设计停掉了整个采音链；所以blocks/raw_frames全0并不说明麦克风坏。最低总空闲堆约5.28MB，失败后PSRAM回到约8MB；后者是清理后的值，不能当推理运行期余量。没有内存分配失败/重启证据，不把结果归因“模型太大”。
+
+已通过固定libmultinet.a反汇编调用关系核对：MN7 model_create会调用esp_mn_commands_alloc，model_destroy会调用esp_mn_commands_free。旧应用额外alloc/free重复操作了库的词表；现已去掉。日志最后“not initialized”是清理阶段问题，不能单凭它证明检测失败根因已经找到。
+
+新自检顺序：
+
+1. `factory_untouched`：create后的原厂默认词表，不先alloc/clear/update/改门槛，直接送官方PCM；固定commands_cn.txt的“打开空调”是ID25。
+2. `custom_reference`：使用库已经创建的词表，更新为测试词、ID1、门槛0.60，再送相同PCM。
+3. 静音对照，然后恢复实际17个指令。每一步输出pass/expected/got/score/state/frames，参考输入补齐到完整块并附2秒静音；模型窗口恢复官方示例的6000ms。默认与定制两条都通过且静音无误报才允许本地动作。
+
+这两条测试仍需在设备上执行；编译和原生逻辑测试不等于模型实测通过。若factory成功而custom失败，重点看动态词表；若二者均失败，才继续查默认模型/库/推理路径，不先责怪用户讲话或麦克风。
+
+即使模型失败，本版仍启动独立的麦克风/AFE音频诊断，状态点保持红色、`DETECTOR ready=0`，没有候选也不执行动作；raw/AFE音频可按之前monitor命令接收或显式录WAV。音频诊断不是绕过模型自检执行指令。若音频初始化本身失败，则仍停止采音并报告实际硬件错误。

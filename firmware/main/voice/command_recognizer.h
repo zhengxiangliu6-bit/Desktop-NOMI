@@ -21,7 +21,6 @@ public:
 private:
     const esp_mn_iface_t *mn_ = nullptr;
     model_iface_data_t *data_ = nullptr;
-    bool commands_allocated_ = false;
     int16_t *buffer_ = nullptr;
     size_t chunk_ = 0, used_ = 0;
     std::atomic<uint32_t> frames_{0}, detections_{0}, timeouts_{0}, rejected_{0};
