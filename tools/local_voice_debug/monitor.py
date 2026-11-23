@@ -35,13 +35,13 @@ def main():
     args=parser.parse_args()
     if not 1<=args.seconds<=600:parser.error('seconds must be 1..600')
     import serial
-    print('[说明] 音频和有限指令识别都在ESP32运行；电脑只接收。此工具没有ASR模型，不上传音频。',flush=True)
+    print('[说明] 音频和有限指令识别都在ESP32运行；电脑只接收；模型可用时才执行识别。此工具没有ASR模型，不上传音频。',flush=True)
     print('[说明] CH1=麦克风原始PCM，CH2=AFE输出(正常识别期间含恢复的VAD开头)。模型未命中时没有完整中文转录。',flush=True)
     print('[录音] '+('显式保存两个WAV到 '+str(args.record_dir) if args.record_dir else '不保存音频或文字'),flush=True)
     input('先关闭miniterm/旧PC语音程序；按Enter开始串口调试，Ctrl+C停止：')
     channels=[1,2] if args.source=='both' else [1] if args.source=='raw' else [2]
     token=secrets.randbelow(0xffffffff)+1;frames=TraceParser(token);files={};buffer=bytearray()
-    guarded={1:0,2:0};peaks={1:0,2:0};energies={1:0,2:0};samples={1:0,2:0};last=0;next_report=0;candidates=0;reported_candidates=0
+    guarded={1:0,2:0};peaks={1:0,2:0};energies={1:0,2:0};samples={1:0,2:0};last=0;next_report=0;candidates=0;reported_candidates=0;model_ready=None
     with serial.Serial(args.port,115200,timeout=.05,write_timeout=.5) as port:
         try:
             if args.record_dir:
@@ -75,14 +75,18 @@ def main():
                     elif b'@NRES1 ' in line:
                         candidates+=1
                         print('[ESP32本地候选] '+line[line.index(b'@NRES1 ')+7:].decode('utf-8',errors='replace').strip(),flush=True)
-                    elif line.strip():print('[ESP32] '+line.decode('utf-8',errors='replace').strip(),flush=True)
+                    elif line.strip():
+                        if b'DETECTOR ready=0' in line or b'DETECTOR_DISABLED' in line:model_ready=False
+                        if b'DETECTOR ready=1' in line or b'VOICE_READY engine=' in line:model_ready=True
+                        print('[ESP32] '+line.decode('utf-8',errors='replace').strip(),flush=True)
                 if now>=next_report:
                     for ch,label in [(1,'识别前 MIC1'),(2,'AFE输出')]:
                         if ch not in channels:continue
                         rms=int((energies[ch]/samples[ch])**.5) if samples[ch] else 0
                         print(f'[音频 {label}] 有效帧={frames.frames[ch]} peak={peaks[ch]} rms={rms} 保护帧={guarded[ch]}',flush=True)
                         peaks[ch]=energies[ch]=samples[ch]=guarded[ch]=0
-                    if candidates==reported_candidates:print('[本地识别] 本秒未收到配置指令候选；不生成虚构转录。',flush=True)
+                    if model_ready is False:print('[音频诊断] 模型尚不可用，不会识别或执行指令；此时无需反复喊。',flush=True)
+                    elif candidates==reported_candidates:print('[本地识别] 本秒未收到配置指令候选；不生成虚构转录。',flush=True)
                     reported_candidates=candidates;next_report=now+1
         finally:
             try:port.write(b'trace off\r\nstatus\r\n')
