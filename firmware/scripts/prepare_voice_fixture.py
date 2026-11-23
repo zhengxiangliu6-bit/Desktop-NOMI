@@ -6,7 +6,7 @@ HEADER='1ac479d217703396d681f352e969268a6c105b563f24638e8a7ca4f8c56b8d68'
 PCM='4725f6b9ababad72eb66459f756e10b838f9bc17ddc0ab2c92e7f46ca7e83f9d'
 def main():
     repo=ROOT/'.deps/esp-sr'
-    expected=next(d['sha'] for d in json.loads((ROOT/'dependencies.lock.json').read_text())['dependencies'] if d['name']=='esp-sr')
+    expected=next(d['sha'] for d in json.loads((ROOT/'dependencies.lock.json').read_text(encoding='utf-8'))['dependencies'] if d['name']=='esp-sr')
     source=subprocess.check_output(['git','-C',str(repo),'show',expected+':'+PATH])
     if hashlib.sha256(source).hexdigest()!=HEADER:raise SystemExit('Public fixture header hash mismatch')
     pcm=bytes(int(x,16) for x in re.findall(rb'0x([0-9a-fA-F]{2})',source))
