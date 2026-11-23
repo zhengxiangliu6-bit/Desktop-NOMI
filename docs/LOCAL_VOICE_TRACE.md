@@ -57,7 +57,7 @@ python debug\monitor.py --port COM3 --seconds 20 --threshold 60 --record-dir D:\
 新自检顺序：
 
 1. `factory_untouched`：create后的原厂默认词表，不先alloc/clear/update/改门槛，直接送官方PCM；固定commands_cn.txt的“打开空调”是ID25。
-2. `custom_reference`：使用库已经创建的词表，更新为测试词、ID1、门槛0.60，再送相同PCM。
+2. `custom_reference`：使用库已经创建的词表，更新为上游示例的打开/关闭空调两条测试词、预期ID1、门槛0.60，再送相同PCM。
 3. 静音对照，然后恢复实际17个指令。每一步输出pass/expected/got/score/state/frames，参考输入补齐到完整块并附2秒静音；模型窗口恢复官方示例的6000ms。默认与定制两条都通过且静音无误报才允许本地动作。
 
 这两条测试仍需在设备上执行；编译和原生逻辑测试不等于模型实测通过。若factory成功而custom失败，重点看动态词表；若二者均失败，才继续查默认模型/库/推理路径，不先责怪用户讲话或麦克风。

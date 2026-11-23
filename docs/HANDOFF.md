@@ -4,7 +4,7 @@
 
 - 从干净c52cb94独立fix/h3-multinet-command-lifecycle，保留不创建PR/不合并main。逐字对比model分区中6个文件与固定源码一致；官方样本经独立本地ASR确认内容打开空调，约1.42秒已给完整词、2.7秒结束（仅软件内容检查）。
 - 用Xtensa nm/objdump确认固定multinet7_quantized.c.obj model_create调用esp_mn_commands_alloc、model_destroy调用esp_mn_commands_free。去掉应用额外alloc/free及所有权布尔；修正重复清理not initialized错误，但不谎称已证实这就是检测失败唯一根因。
-- 之前selftest在测试前已clear/update默认词表，不能当官方默认路径对照。新顺序先factory_untouched（不改默认配置、预期ID25），再custom_reference（库已有词表上更新、ID1、0.60）、静音。窗口用上游6000ms；输出状态/样本/实际ID/帧数。新增纯reference_probe验证输入不丢样、补零、正确/错误ID、超时、非法参数与低分，不将纯逻辑单测当NN执行。
+- 之前selftest在测试前已clear/update默认词表，不能当官方默认路径对照。新顺序先factory_untouched（不改默认配置、预期ID25），再custom_reference（库已有词表上按上游示例配置打开/关闭空调两条、预期ID1、0.60）、静音。窗口用上游6000ms；输出状态/样本/实际ID/帧数。新增纯reference_probe验证输入不丢样、补零、正确/错误ID、超时、非法参数与低分，不将纯逻辑单测当NN执行。
 - 模型未过时关闭识别/动作并保持Fault红色，但独立AudioInput/AFE/音频trace继续；所有结果门控维持关闭，供用户要求的原始音频诊断。硬件/I2S/AFE故障仍真正停止采音。模型和采音所有权分离，清理不重复销毁词表。
 - 修改recognizer、wake_controller、reference_probe及其测试、版本0.6.4/CI/构建说明、LOCAL_VOICE_TRACE/API/架构/路线图。用户私有PCM不变，不上传公开Git或Actions；默认词表仅自检临时使用，不执行家电动作、不更换激活名。
 - 原生CTest11/11初轮通过；commands初次目标编译另记。最终提交后重建私有包与软件检查；两条NN自检/实际麦克风/唤醒/播放/误触发/30分钟仍需实体执行，不宣称已修好识别。

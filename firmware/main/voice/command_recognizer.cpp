@@ -48,7 +48,8 @@ bool CommandRecognizer::open(srmodel_list_t *models)
 bool CommandRecognizer::install_commands(bool diagnostic) {
     if(esp_mn_commands_clear()!=ESP_OK)return false;
     if(diagnostic) {
-        if(esp_mn_commands_add(1,"da kai kong tiao")!=ESP_OK)return false;
+        if(esp_mn_commands_add(1,"da kai kong tiao")!=ESP_OK ||
+           esp_mn_commands_add(2,"guan bi kong tiao")!=ESP_OK)return false;
     } else {
         if(esp_mn_commands_add(1,CONFIG_NOMI_VOICE_WAKE_PINYIN)!=ESP_OK)return false;
         for(const auto &c:voice_commands)if(esp_mn_commands_add(c.id,c.pinyin)!=ESP_OK)return false;
