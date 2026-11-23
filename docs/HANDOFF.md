@@ -9,6 +9,13 @@
 - 修改recognizer、wake_controller、reference_probe及其测试、版本0.6.4/CI/构建说明、LOCAL_VOICE_TRACE/API/架构/路线图。用户私有PCM不变，不上传公开Git或Actions；默认词表仅自检临时使用，不执行家电动作、不更换激活名。
 - 原生CTest11/11初轮通过；commands初次目标编译另记。最终提交后重建私有包与软件检查；两条NN自检/实际麦克风/唤醒/播放/误触发/30分钟仍需实体执行，不宣称已修好识别。
 
+## 0.6.4交付验证
+
+- C++实现0802c05四profile本地构建/审计/打包通过；11项CTest、10项Python工具测试通过。0802c05的GitHub固件run45160353848全部success，前版66a27f0 run45159953937也success；CI不执行真实板上NN，不能称默认/定制自检已通过。
+- ef9f89a仅调整接收工具文案/状态，区分detector unavailable与真正“没有匹配指令”。两轮PTY CLI模拟（默认不录音/显式双WAV）通过，随后commands私有包重新构建打包，source_commit=ef9f89a、source_dirty=false；逐文件SHA256和用户PCM确实在链接app中已复核。
+- 本地定制包`firmware/dist/desktop-nomi-model-lifecycle-your-voice-v0.6.4.zip`，7,829,376字节，SHA256 `ba4734f080a53dbbccde479485f0147f91b6ad3b96098b32acef08213c1de128`。用户声音不入公开Git/Actions。代码已推送独立分支，不创建PR/合并main。
+- 下一轮先不说话、不继续降低门槛：刷私有包，运行debug/monitor.py --port COM3 --seconds 30 --source raw，记录factory_untouched/custom_reference的pass/got/state/frames，以及DETECTOR ready和原始音频帧。自检失败仍应能采音诊断，但不会执行语音动作；识别问题是否解决尚待此实体证据。
+
 ---
 
 # 当前0.6.3：VAD输入修正、模型自检与双路串口音频
