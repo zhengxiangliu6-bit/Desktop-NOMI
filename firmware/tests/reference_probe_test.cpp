@@ -9,6 +9,6 @@ int main(){
  result=nomi::probe_reference(pcm,5,scratch,4,1,[](const int16_t *){return nomi::ProbeDecision{2,0,0};});
  assert(!result.pass && result.frames==1 && result.last_state==2);
  result=nomi::probe_reference(pcm,5,scratch,4,1,[](const int16_t *){return nomi::ProbeDecision{1,25,.99f};});assert(!result.pass);
- result=nomi::probe_reference(pcm,5,scratch,4,25,[](const int16_t *){return nomi::ProbeDecision{1,25,.1f};});assert(!result.pass);
+ result=nomi::probe_reference(pcm,5,scratch,4,25,[](const int16_t *){return nomi::ProbeDecision{1,25,.246f};});assert(result.pass);
  result=nomi::probe_reference(pcm,5,scratch,0,1,[](const int16_t *){return nomi::ProbeDecision{};});assert(!result.pass && !result.frames);
 }

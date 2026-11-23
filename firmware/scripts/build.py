@@ -152,9 +152,9 @@ Commands: status / demo / wake off / wake on / wake reinit / wake status
 See manifest.json for offsets, SHA256 and model identity.
 '''
     if profile == "commands":
-        readme += "\nOFFLINE 0.6.5: 14 local face commands + fixed reply; no PC application needed.\nRead docs/OFFLINE_COMMAND_REPLY.md. WAV replacement needs rebuild + reflash.\n"
+        readme += "\nOFFLINE 0.6.6: 14 local face commands + fixed reply; no PC application needed.\nRead docs/OFFLINE_COMMAND_REPLY.md. WAV replacement needs rebuild + reflash.\n"
     if profile == "usb_asr":
-        readme = """Desktop-NOMI 14 expression gallery + fixed spoken OK / firmware 0.6.5
+        readme = """Desktop-NOMI 14 expression gallery + fixed spoken OK / firmware 0.6.6
 Board: Waveshare ESP32-S3-Touch-LCD-1.85B ONLY
 Device captures audio. ASR runs LOCALLY on Windows.
 0.6.0 shares the fixed player with offline commands; PC0.5.0 remains compatible; playback guard temporarily suppresses microphone ASR.
