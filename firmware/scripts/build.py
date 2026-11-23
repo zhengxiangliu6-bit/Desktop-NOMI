@@ -205,8 +205,10 @@ def main():
     defaults = str(ROOT / "sdkconfig.defaults")
     if options.profile != "audio":
         defaults += ";" + str(ROOT / ("sdkconfig." + options.profile))
+    # ESP-SR movemodel.py reads sdkconfig using Python’s default encoding.
+    build_env = {**os.environ, "PYTHONUTF8": "1"}
     subprocess.run([sys.executable, str(idf), "-B", str(build), "-D", f"SDKCONFIG={config}",
-                    "-D", f"SDKCONFIG_DEFAULTS={defaults}", "-D", f"NOMI_REPLY_ASSET_DIR={ASSETS.as_posix()}", "build", "size"], cwd=ROOT, check=True)
+                    "-D", f"SDKCONFIG_DEFAULTS={defaults}", "-D", f"NOMI_REPLY_ASSET_DIR={ASSETS.as_posix()}", "build", "size"], cwd=ROOT, env=build_env, check=True)
     if options.profile == "commands":
         from bundle_commands import bundle_commands
         image = build / "srmodels/srmodels.bin"
