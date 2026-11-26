@@ -10,6 +10,8 @@ choice NOMI_WAKE_PROFILE
     config NOMI_VOICE_COMMANDS
         bool "Offline Chinese commands with configurable activation phrase (MultiNet7)"
         select SR_MN_CN_MULTINET7_QUANT
+    config NOMI_WIFI_VOICE
+        bool "BOOT button short recording with HTTPS transcription gateway"
     config NOMI_USB_ASR
         bool "USB microphone transport for Windows local Chinese transcription (no device ASR/actions)"
 endchoice
@@ -21,4 +23,14 @@ config NOMI_VOICE_WAKE_PINYIN
     string "Activation phrase spoken pinyin (lowercase, space separated, no tones)"
     depends on NOMI_VOICE_COMMANDS
     default "xiao mi tong xue"
+if NOMI_WIFI_VOICE
+config NOMI_WIFI_SSID
+    string "Wi-Fi SSID"
+config NOMI_WIFI_PASSWORD
+    string "Wi-Fi password"
+config NOMI_WIFI_VOICE_URL
+    string "HTTPS voice gateway URL including /device/voice"
+config NOMI_WIFI_DEVICE_TOKEN
+    string "Device gateway token"
+endif
 endmenu

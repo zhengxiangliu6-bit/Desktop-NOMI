@@ -31,6 +31,8 @@ def validate(build, profile):
         raise ValueError("Wrong profile in existing build directory")
     if bool(cfg.get("NOMI_VOICE_COMMANDS")) != (profile == "commands"):
         raise ValueError("Wrong command recognition profile")
+    if bool(cfg.get("NOMI_WIFI_VOICE")) != (profile == "wifi"):
+        raise ValueError("Wrong Wi-Fi voice profile")
     if bool(cfg.get("NOMI_USB_ASR")) != (profile == "usb_asr"):
         raise ValueError("Wrong USB ASR profile")
     data = (build / "srmodels" / "srmodels.bin").read_bytes()
@@ -44,10 +46,10 @@ def validate(build, profile):
         files = struct.unpack_from("<I", data, cursor+32)[0]
         cursor += 36+files*40
         if cursor > len(data): raise ValueError("Truncated model file table")
-    expected = {"audio": [], "usb_asr": [], "benchmark": ["wn9_xiaoaitongxue"], "commands": ["mn7_cn", "fst"]}[profile]
+    expected = {"audio": [], "usb_asr": [], "wifi": [], "benchmark": ["wn9_xiaoaitongxue"], "commands": ["mn7_cn", "fst"]}[profile]
     if sorted(names) != sorted(expected): raise ValueError(f"Wrong models: {names}")
     if len(data) > 0x400000: raise ValueError("Model partition overflow")
-    if profile in ("usb_asr","commands"):
+    if profile in ("usb_asr","commands","wifi"):
         asset = ASSETS / "okay.pcm"
         meta = json.loads(asset.with_suffix(".json").read_text(encoding="utf-8"))
         pcm = asset.read_bytes()
@@ -62,13 +64,13 @@ def validate(build, profile):
         raise ValueError("Xtensa nm is required to audit the linked ELF")
     symbols = subprocess.check_output([nm, "--defined-only", str(build / "desktop_nomi_h2.elf")], text=True)
     for forbidden in ("esp_wifi_init", "esp_http_client_init", "esp_tls_conn_new", "esp_tts_create"):
-        if forbidden in symbols:
+        if forbidden in symbols and (profile != "wifi" or forbidden == "esp_tts_create"):
             raise ValueError(f"Out-of-scope runtime linked: {forbidden}")
     if profile != "commands" and "esp_mn_handle_from_name" in symbols:
         raise ValueError("Command recognizer linked into diagnostic-only profile")
     if profile == "commands" and "esp_mn_handle_from_name" not in symbols:
         raise ValueError("Command recognizer missing")
-    print(f"Validated {profile}: models={names}; no Wi-Fi/HTTP/TLS/TTS entry points linked")
+    print(f"Validated {profile}: models={names}")
     return args
 
 
@@ -186,13 +188,16 @@ See manifest.json for file hashes and source revision.
 def main():
     global ASSETS
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--profile", choices=("audio", "benchmark", "commands", "usb_asr"), default="audio")
+    parser.add_argument("--profile", choices=("audio", "benchmark", "commands", "usb_asr", "wifi"), default="audio")
     parser.add_argument("--package", action="store_true")
     parser.add_argument("--skip-prepare", action="store_true")
     parser.add_argument("--reply-assets",type=pathlib.Path,help="Private folder with okay.pcm/okay.json/NOTICE.md; not copied into Git")
+    parser.add_argument("--menuconfig", action="store_true")
     options = parser.parse_args()
+    if options.profile == "wifi" and options.package:
+        parser.error("Wi-Fi build can contain private credentials; use local build output")
     if options.reply_assets:
-        if options.profile not in ("commands","usb_asr"):parser.error("Custom reply requires commands or usb_asr")
+        if options.profile not in ("commands","usb_asr","wifi"):parser.error("Custom reply requires commands, usb_asr or wifi")
         ASSETS=options.reply_assets.resolve()
     if not options.skip_prepare:
         subprocess.run([sys.executable, str(ROOT / "scripts/prepare.py")], check=True)
@@ -207,8 +212,11 @@ def main():
         defaults += ";" + str(ROOT / ("sdkconfig." + options.profile))
     # ESP-SR movemodel.py reads sdkconfig using Python’s default encoding.
     build_env = {**os.environ, "PYTHONUTF8": "1"}
+    actions = ["menuconfig"] if options.menuconfig else ["build", "size"]
     subprocess.run([sys.executable, str(idf), "-B", str(build), "-D", f"SDKCONFIG={config}",
-                    "-D", f"SDKCONFIG_DEFAULTS={defaults}", "-D", f"NOMI_REPLY_ASSET_DIR={ASSETS.as_posix()}", "build", "size"], cwd=ROOT, env=build_env, check=True)
+                    "-D", f"SDKCONFIG_DEFAULTS={defaults}", "-D", f"NOMI_REPLY_ASSET_DIR={ASSETS.as_posix()}", *actions], cwd=ROOT, env=build_env, check=True)
+    if options.menuconfig:
+        return
     if options.profile == "commands":
         from bundle_commands import bundle_commands
         image = build / "srmodels/srmodels.bin"

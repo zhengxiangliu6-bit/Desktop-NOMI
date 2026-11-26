@@ -1,4 +1,5 @@
 #include "face_model.h"
+#include "wifi_voice.h"
 #include "face_catalog.h"
 #include "face_view.h"
 #include "wake_word_controller.h"
@@ -204,6 +205,8 @@ extern "C" void app_main()
     ESP_LOGI(TAG, "Commands + Enter: idle blink happy sad curious thinking listening speaking angry surprised sleepy wink love confused demo status");
 #if CONFIG_NOMI_USB_ASR
     usb_audio.start();
+#elif CONFIG_NOMI_WIFI_VOICE
+    nomi::wifi_voice_start();
 #else
     wake.start();
 #endif
@@ -216,6 +219,9 @@ extern "C" void app_main()
     uint64_t previous_frame = 0;
     uint64_t frame_at = 0;
     while (true) {
+#if CONFIG_NOMI_WIFI_VOICE
+        if (const auto *action = nomi::wifi_voice_poll()) command(action, now_ms());
+#endif
         uint64_t now = now_ms();
         read_commands(now);
         nomi::WakeEvent event;
